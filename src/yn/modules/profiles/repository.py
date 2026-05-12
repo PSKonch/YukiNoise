@@ -1,3 +1,5 @@
+from typing import Sequence
+
 from sqlalchemy import func, exists, or_, select, insert, update, delete, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -49,8 +51,40 @@ class ProfileRepository:
         stmt = update(self.model).where(self.model.id == profile_id).values(**values)
         await self.session.execute(stmt)
 
+    async def update_displayed_name(self, profile_id: str, displayed_name: str) -> None:
+        stmt = (
+            update(self.model)
+            .where(self.model.id == profile_id)
+            .values(displayed_name=displayed_name)
+        )
+        await self.session.execute(stmt)
+
+    async def update_bio(self, profile_id: str, bio: str) -> None:
+        stmt = update(self.model).where(self.model.id == profile_id).values(bio=bio)
+        await self.session.execute(stmt)
+
+    async def update_social_links(
+        self, profile_id: str, social_links: dict[str, str]
+    ) -> None:
+        stmt = (
+            update(self.model)
+            .where(self.model.id == profile_id)
+            .values(social_links=social_links)
+        )
+        await self.session.execute(stmt)
+
     async def get_profile_by_id(self, profile_id: str) -> Profile | None:
         query = select(self.model).where(self.model.id == profile_id)
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def get_profile_by_user_id(self, user_id: str) -> Profile | None:
+        query = select(self.model).where(self.model.user_id == user_id)
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def get_by_displayed_name(self, displayed_name: str) -> Profile | None:
+        query = select(self.model).where(self.model.displayed_name == displayed_name)
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
@@ -63,7 +97,7 @@ class ProfileRepository:
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def full_text_search_profiles(self, search: str) -> list[Profile]:
+    async def full_text_search_profiles(self, search: str) -> Sequence[Profile]:
         """
         Search profiles by displayed name and bio using full-text search
         """
@@ -84,7 +118,7 @@ class ProfileRepository:
         result = await self.session.execute(query)
         return result.scalars().all()
 
-    async def ilike_search_profiles(self, search: str) -> list[Profile]:
+    async def ilike_search_profiles(self, search: str) -> Sequence[Profile]:
         """
         Search profiles by displayed name and bio using ILIKE
         """
@@ -100,3 +134,19 @@ class ProfileRepository:
         )
         result = await self.session.execute(query)
         return result.scalars().all()
+
+    async def soft_delete_profile(self, profile_id: str) -> None:
+        stmt = (
+            update(self.model)
+            .where(and_(self.model.id == profile_id, self.model.deleted_at.is_(None)))
+            .values(deleted_at=func.now())
+        )
+        await self.session.execute(stmt)
+
+    async def restore_profile(self, profile_id: str) -> None:
+        stmt = (
+            update(self.model)
+            .where(self.model.id == profile_id)
+            .values(deleted_at=None)
+        )
+        await self.session.execute(stmt)
