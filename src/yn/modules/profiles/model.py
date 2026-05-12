@@ -1,0 +1,57 @@
+from uuid import uuid4
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Index, UUID, ForeignKey, Computed, func
+from sqlalchemy.dialects.postgresql import TSVECTOR, JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from yn.shared.database import Base
+
+
+if TYPE_CHECKING:
+    from yn.modules.users.model import User
+
+
+class Profile(Base):
+    __tablename__ = "profiles"
+    __table_args__ = (
+        Index("ix_profiles_search_vector", "search_vector", postgresql_using="gin"),
+    )
+
+    id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(
+        UUID,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+    )
+
+    displayed_name: Mapped[str] = mapped_column(unique=True, nullable=False)
+    bio: Mapped[str | None] = mapped_column(nullable=True)
+    search_vector: Mapped[TSVECTOR] = mapped_column(
+        TSVECTOR,
+        Computed(
+            """
+            setweight(to_tsvector('english', coalesce(displayed_name, '')), 'A') ||
+            setweight(to_tsvector('english', coalesce(bio, '')), 'B')
+            """,
+            persisted=True,
+        ),
+        nullable=False,
+    )
+
+    social_links: Mapped[dict[str, str] | None] = mapped_column(
+        JSONB, nullable=True, default=None
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
+    # relationships
+    user: Mapped["User"] = relationship("User", back_populates="profile")
