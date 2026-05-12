@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from yn.core.settings import settings
+from yn.shared.settings import settings
 
 
 @asynccontextmanager
