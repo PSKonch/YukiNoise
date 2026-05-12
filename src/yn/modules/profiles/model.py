@@ -1,13 +1,12 @@
-from uuid import uuid4
 from datetime import datetime
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
-from sqlalchemy import Index, UUID, ForeignKey, Computed, func
-from sqlalchemy.dialects.postgresql import TSVECTOR, JSONB
+from sqlalchemy import UUID, Computed, ForeignKey, Index, func
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from yn.shared.database import Base
-
 
 if TYPE_CHECKING:
     from yn.modules.users.model import User

@@ -1,6 +1,6 @@
 from typing import Sequence
 
-from sqlalchemy import func, exists, select, insert, update, delete, and_
+from sqlalchemy import and_, delete, exists, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -13,13 +13,10 @@ class UserRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create(self, email: str, hashed_password: str) -> User:
+    async def create(self, email: str, hashed_password: str, role: str) -> User:
         stmt = (
             insert(self.model)
-            .values(
-                email=email,
-                hashed_password=hashed_password,
-            )
+            .values(email=email, hashed_password=hashed_password, role=role)
             .returning(self.model)
         )
         result = await self.session.execute(stmt)
@@ -37,6 +34,10 @@ class UserRepository:
         stmt = (
             update(self.model).where(self.model.id == user_id).values(email=new_email)
         )
+        await self.session.execute(stmt)
+
+    async def update_role(self, user_id: str, new_role: str) -> None:
+        stmt = update(self.model).where(self.model.id == user_id).values(role=new_role)
         await self.session.execute(stmt)
 
     async def get_user_by_id(self, user_id: str) -> User | None:
@@ -110,6 +111,4 @@ class UserRepository:
     async def is_email_taken(self, email: str) -> bool:
         query = select(exists().where(self.model.email == email))
         result = await self.session.execute(query)
-        if isinstance(result.scalar(), bool):
-            return result.scalar()
-        return False
+        return bool(result.scalar())

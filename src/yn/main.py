@@ -4,6 +4,7 @@ from typing import AsyncGenerator
 import uvicorn
 from fastapi import FastAPI
 
+from yn.modules.users.route import router as users_router
 from yn.shared.settings import settings
 
 
@@ -20,6 +21,8 @@ app = FastAPI(
     version="0.0.1",
     lifespan=lifespan,
 )
+
+app.include_router(users_router)
 
 
 @app.get("/")
