@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from yn.modules.users.dto import UserDTO, from_orm
+from yn.modules.users.dto import UserDTO
 from yn.modules.users.security import hash_password, verify_password
 from yn.shared.unit_of_work import UnitOfWork
 
@@ -11,11 +11,11 @@ class UserService:
 
     async def get_user_by_id(self, user_id: UUID) -> UserDTO | None:
         user = await self.uow.users.get_user_by_id(user_id)
-        return from_orm(user) if user else None
+        return UserDTO.from_orm(user) if user else None
 
     async def get_user_by_email(self, email: str) -> UserDTO | None:
         user = await self.uow.users.get_user_by_email(email)
-        return from_orm(user) if user else None
+        return UserDTO.from_orm(user) if user else None
 
     async def is_email_taken(self, email: str) -> bool:
         return await self.uow.users.is_email_taken(email)
@@ -27,7 +27,7 @@ class UserService:
         user = await self.uow.users.create(
             email=email, hashed_password=hashed_password, role=role
         )
-        return from_orm(user)
+        return UserDTO.from_orm(user)
 
     async def authenticate_user(self, email: str, password: str) -> UserDTO | None:
         repo_user = await self.uow.users.get_user_by_email(email)
@@ -35,7 +35,7 @@ class UserService:
             return None
         if not verify_password(password, repo_user.hashed_password):
             return None
-        return from_orm(repo_user)
+        return UserDTO.from_orm(repo_user)
 
     async def soft_delete_current_user(self, user_id: UUID) -> None:
         await self.uow.users.soft_delete_user(user_id)

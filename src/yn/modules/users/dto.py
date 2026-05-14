@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
+from yn.modules.users.model import User
+
 
 @dataclass
 class UserDTO:
@@ -13,14 +15,14 @@ class UserDTO:
     updated_at: datetime | None = None
     deleted_at: datetime | None = None
 
-
-def from_orm(user) -> UserDTO:
-    return UserDTO(
-        id=user.id,
-        email=user.email,
-        role=user.role,
-        is_active=user.is_active,
-        created_at=getattr(user, "created_at", None),
-        updated_at=getattr(user, "updated_at", None),
-        deleted_at=getattr(user, "deleted_at", None),
-    )
+    @classmethod
+    def from_orm(cls, user: User) -> "UserDTO":
+        return cls(
+            id=user.id,
+            email=user.email,
+            role=user.role,
+            is_active=user.is_active,
+            created_at=getattr(user, "created_at", None),
+            updated_at=getattr(user, "updated_at", None),
+            deleted_at=getattr(user, "deleted_at", None),
+        )

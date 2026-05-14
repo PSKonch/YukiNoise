@@ -17,10 +17,14 @@ class UnitOfWork:
 
     @property
     def users(self) -> "UserRepository":
+        if self._users_repo is None:
+            self._users_repo = UserRepository(self._session)
         return self._users_repo
 
     @property
     def profiles(self) -> "ProfileRepository":
+        if self._profiles_repo is None:
+            self._profiles_repo = ProfileRepository(self._session)
         return self._profiles_repo
 
     async def __aenter__(self) -> "UnitOfWork":
@@ -30,7 +34,11 @@ class UnitOfWork:
         if exc:
             await self._session.rollback()
         else:
-            await self._session.commit()
+            try:
+                await self._session.commit()
+            except Exception:
+                await self._session.rollback()
+                raise
 
     async def commit(self) -> None:
         await self._session.commit()

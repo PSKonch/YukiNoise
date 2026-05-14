@@ -17,7 +17,7 @@ async def register_user(
     payload: UserCreate,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ):
-    if await auth_service.user_service.is_email_taken(payload.email):
+    if await auth_service.is_email_taken(payload.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
@@ -56,7 +56,7 @@ async def soft_delete_current_user(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ):
-    await auth_service.user_service.soft_delete_current_user(current_user.id)
+    await auth_service.soft_delete_user(current_user.id)
     return {"detail": "User soft deleted successfully"}
 
 
@@ -65,7 +65,7 @@ async def restore_current_user(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ):
-    await auth_service.user_service.restore_user(current_user.id)
+    await auth_service.restore_user(current_user.id)
     return {"detail": "User restored successfully"}
 
 
@@ -74,5 +74,5 @@ async def hard_delete_current_user(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ):
-    await auth_service.user_service.hard_delete_user(current_user.id)
+    await auth_service.hard_delete_user(current_user.id)
     return {"detail": "User permanently deleted successfully"}
