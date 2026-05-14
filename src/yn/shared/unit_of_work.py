@@ -18,12 +18,20 @@ class UnitOfWork:
     @property
     def users(self) -> "UserRepository":
         if self._users_repo is None:
+            from importlib import import_module
+
+            repo_mod = import_module("yn.modules.users.repository")
+            UserRepository = getattr(repo_mod, "UserRepository")
             self._users_repo = UserRepository(self._session)
         return self._users_repo
 
     @property
     def profiles(self) -> "ProfileRepository":
         if self._profiles_repo is None:
+            from importlib import import_module
+
+            repo_mod = import_module("yn.modules.profiles.repository")
+            ProfileRepository = getattr(repo_mod, "ProfileRepository")
             self._profiles_repo = ProfileRepository(self._session)
         return self._profiles_repo
 

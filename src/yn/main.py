@@ -4,6 +4,7 @@ from typing import AsyncGenerator
 import uvicorn
 from fastapi import FastAPI
 
+from yn.modules.profiles.route import router as profiles_router
 from yn.modules.users.route import router as users_router
 from yn.shared.settings import settings
 
@@ -23,6 +24,7 @@ app = FastAPI(
 )
 
 app.include_router(users_router)
+app.include_router(profiles_router)
 
 
 @app.get("/")
