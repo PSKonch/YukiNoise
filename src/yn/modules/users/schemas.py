@@ -1,8 +1,13 @@
-from pydantic import BaseModel, EmailStr
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
-class UserCreate(BaseModel):
+class UserBase(BaseModel):
     email: EmailStr
+
+
+class UserCreate(UserBase):
     password: str
 
 
@@ -11,7 +16,18 @@ class UserUpdate(BaseModel):
     password: str | None = None
 
 
-class User(UserCreate):
-    id: str
+class UserRead(UserBase):
+    id: UUID
     role: str
     is_active: bool
+    model_config = ConfigDict(from_attributes=True)
+
+
+class User(UserRead):
+    pass
+
+
+class TokenPair(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
