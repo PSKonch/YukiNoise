@@ -35,7 +35,7 @@ class ProfileRepository:
 
     async def update(
         self,
-        profile_id: str,
+        user_id: str,
         displayed_name: str | None = None,
         bio: str | None = None,
         social_links: dict[str, str] | None = None,
@@ -48,30 +48,35 @@ class ProfileRepository:
         if social_links is not None:
             values["social_links"] = social_links
 
-        stmt = update(self.model).where(self.model.id == profile_id).values(**values)
+        stmt = update(self.model).where(self.model.user_id == user_id).values(**values)
         await self._session.execute(stmt)
 
-    async def update_displayed_name(self, profile_id: str, displayed_name: str) -> None:
+    async def update_displayed_name(self, user_id: str, displayed_name: str) -> None:
         stmt = (
             update(self.model)
-            .where(self.model.id == profile_id)
+            .where(self.model.user_id == user_id)
             .values(displayed_name=displayed_name)
         )
         await self._session.execute(stmt)
 
-    async def update_bio(self, profile_id: str, bio: str) -> None:
-        stmt = update(self.model).where(self.model.id == profile_id).values(bio=bio)
+    async def update_bio(self, user_id: str, bio: str) -> None:
+        stmt = update(self.model).where(self.model.user_id == user_id).values(bio=bio)
         await self._session.execute(stmt)
 
     async def update_social_links(
-        self, profile_id: str, social_links: dict[str, str]
+        self, user_id: str, social_links: dict[str, str]
     ) -> None:
         stmt = (
             update(self.model)
-            .where(self.model.id == profile_id)
+            .where(self.model.user_id == user_id)
             .values(social_links=social_links)
         )
         await self._session.execute(stmt)
+
+    async def get_profiles(self) -> Sequence[Profile]:
+        query = select(self.model).where(self.model.deleted_at.is_(None))
+        result = await self._session.execute(query)
+        return result.scalars().all()
 
     async def get_profile_by_id(self, profile_id: str) -> Profile | None:
         query = select(self.model).where(self.model.id == profile_id)
@@ -135,18 +140,22 @@ class ProfileRepository:
         result = await self._session.execute(query)
         return result.scalars().all()
 
-    async def soft_delete_profile(self, profile_id: str) -> None:
+    async def soft_delete_profile(self, user_id: str) -> None:
         stmt = (
             update(self.model)
-            .where(and_(self.model.id == profile_id, self.model.deleted_at.is_(None)))
+            .where(and_(self.model.user_id == user_id, self.model.deleted_at.is_(None)))
             .values(deleted_at=func.now())
         )
         await self._session.execute(stmt)
 
-    async def restore_profile(self, profile_id: str) -> None:
+    async def restore_profile(self, user_id: str) -> None:
         stmt = (
             update(self.model)
-            .where(self.model.id == profile_id)
+            .where(self.model.user_id == user_id)
             .values(deleted_at=None)
         )
+        await self._session.execute(stmt)
+
+    async def hard_delete_profile(self, user_id: str) -> None:
+        stmt = delete(self.model).where(self.model.user_id == user_id)
         await self._session.execute(stmt)

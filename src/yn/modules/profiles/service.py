@@ -8,6 +8,10 @@ class ProfileService:
     def __init__(self, uow: UnitOfWork):
         self.uow = uow
 
+    async def get_all_profiles(self) -> list[ProfileDTO]:
+        profiles = await self.uow.profiles.get_profiles()
+        return [ProfileDTO.from_orm(profile) for profile in profiles]
+
     async def get_profile_by_user_id(self, user_id: UUID) -> ProfileDTO | None:
         profile = await self.uow.profiles.get_profile_by_user_id(user_id)
         return ProfileDTO.from_orm(profile) if profile else None
@@ -40,3 +44,20 @@ class ProfileService:
             social_links=social_links,
         )
         return ProfileDTO.from_orm(profile)
+
+    async def update_profile(
+        self,
+        user_id: UUID,
+        displayed_name: str | None = None,
+        bio: str | None = None,
+        social_links: dict[str, str] | None = None,
+    ) -> None:
+        await self.uow.profiles.update(
+            user_id=str(user_id),
+            displayed_name=displayed_name,
+            bio=bio,
+            social_links=social_links,
+        )
+
+    async def hard_delete_profile(self, user_id: UUID) -> None:
+        await self.uow.profiles.hard_delete_profile(str(user_id))
