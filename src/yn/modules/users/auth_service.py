@@ -14,10 +14,8 @@ class AuthService:
         refresh_token = create_refresh_token(data={"sub": str(user.id)})
         return access_token, refresh_token
 
-    async def login(self, email: str, password: str) -> tuple[str, str] | None:
+    async def login(self, email: str, password: str) -> tuple[str, str]:
         user = await self.user_service.authenticate_user(email, password)
-        if user is None:
-            return None
         access_token = create_access_token(data={"sub": str(user.id)})
         refresh_token = create_refresh_token(data={"sub": str(user.id)})
         return access_token, refresh_token

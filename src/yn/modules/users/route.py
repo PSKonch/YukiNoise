@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 
 from yn.modules.users.auth import get_current_user
@@ -16,11 +16,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 async def register_user(
     payload: UserCreate,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
-):
-    if await auth_service.is_email_taken(payload.email):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
-        )
+) -> TokenPair:
     access_token, refresh_token = await auth_service.register(
         email=payload.email, password=payload.password
     )
@@ -32,22 +28,16 @@ async def login_user(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> TokenPair:
-    tokens = await auth_service.login(form_data.username, form_data.password)
-    if tokens is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    access_token, refresh_token = tokens
+    access_token, refresh_token = await auth_service.login(
+        form_data.username, form_data.password
+    )
     return TokenPair(access_token=access_token, refresh_token=refresh_token)
 
 
-@router.get("/me", response_model=UserRead)
+@router.get("/me")
 async def read_current_user(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
-):
+) -> UserRead:
     return UserRead.model_validate(current_user, from_attributes=True)
 
 
@@ -55,7 +45,7 @@ async def read_current_user(
 async def soft_delete_current_user(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
-):
+) -> dict[str, str]:
     await auth_service.soft_delete_user(current_user.id)
     return {"detail": "User soft deleted successfully"}
 
@@ -64,7 +54,7 @@ async def soft_delete_current_user(
 async def restore_current_user(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
-):
+) -> dict[str, str]:
     await auth_service.restore_user(current_user.id)
     return {"detail": "User restored successfully"}
 
@@ -73,6 +63,6 @@ async def restore_current_user(
 async def hard_delete_current_user(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
-):
+) -> dict[str, str]:
     await auth_service.hard_delete_user(current_user.id)
     return {"detail": "User permanently deleted successfully"}
