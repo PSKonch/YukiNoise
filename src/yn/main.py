@@ -6,6 +6,7 @@ from fastapi import FastAPI
 
 from yn.modules.profiles.route import router as profiles_router
 from yn.modules.users.route import router as users_router
+from yn.shared.errors import register_exception_handlers
 from yn.shared.settings import settings
 
 
@@ -22,6 +23,8 @@ app = FastAPI(
     version="0.0.1",
     lifespan=lifespan,
 )
+
+register_exception_handlers(app)
 
 app.include_router(users_router)
 app.include_router(profiles_router)

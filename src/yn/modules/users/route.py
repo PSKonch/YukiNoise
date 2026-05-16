@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 
 from yn.modules.users.auth import get_current_user
@@ -17,10 +17,6 @@ async def register_user(
     payload: UserCreate,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ):
-    if await auth_service.is_email_taken(payload.email):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
-        )
     access_token, refresh_token = await auth_service.register(
         email=payload.email, password=payload.password
     )
@@ -32,15 +28,9 @@ async def login_user(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> TokenPair:
-    tokens = await auth_service.login(form_data.username, form_data.password)
-    if tokens is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    access_token, refresh_token = tokens
+    access_token, refresh_token = await auth_service.login(
+        form_data.username, form_data.password
+    )
     return TokenPair(access_token=access_token, refresh_token=refresh_token)
 
 

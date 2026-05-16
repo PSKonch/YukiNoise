@@ -1,6 +1,7 @@
 from typing import Sequence
+from uuid import UUID
 
-from sqlalchemy import and_, delete, exists, func, insert, or_, select, update
+from sqlalchemy import and_, delete, func, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -15,7 +16,7 @@ class ProfileRepository:
 
     async def create(
         self,
-        user_id: str,
+        user_id: UUID,
         displayed_name: str,
         bio: str | None = None,
         social_links: dict[str, str] | None = None,
@@ -35,11 +36,11 @@ class ProfileRepository:
 
     async def update(
         self,
-        user_id: str,
+        user_id: UUID,
         displayed_name: str | None = None,
         bio: str | None = None,
         social_links: dict[str, str] | None = None,
-    ) -> None:
+    ) -> bool:
         values = {}
         if displayed_name is not None:
             values["displayed_name"] = displayed_name
@@ -48,64 +49,73 @@ class ProfileRepository:
         if social_links is not None:
             values["social_links"] = social_links
 
+        if not values:
+            return False
+
         stmt = (
             update(self.model)
             .where(self.model.user_id == user_id)
             .values(**values)
-            .returning(self.model)
+            .returning(self.model.id)
         )
-        await self._session.execute(stmt)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none() is not None
 
-    async def update_displayed_name(self, user_id: str, displayed_name: str) -> None:
+    async def update_displayed_name(self, user_id: UUID, displayed_name: str) -> bool:
         stmt = (
             update(self.model)
             .where(self.model.user_id == user_id)
             .values(displayed_name=displayed_name)
-            .returning(self.model)
+            .returning(self.model.id)
         )
-        await self._session.execute(stmt)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none() is not None
 
-    async def update_bio(self, user_id: str, bio: str) -> None:
+    async def update_bio(self, user_id: UUID, bio: str) -> bool:
         stmt = (
             update(self.model)
             .where(self.model.user_id == user_id)
             .values(bio=bio)
-            .returning(self.model)
+            .returning(self.model.id)
         )
-        await self._session.execute(stmt)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none() is not None
 
     async def update_social_links(
-        self, user_id: str, social_links: dict[str, str]
-    ) -> None:
+        self, user_id: UUID, social_links: dict[str, str]
+    ) -> bool:
         stmt = (
             update(self.model)
             .where(self.model.user_id == user_id)
             .values(social_links=social_links)
-            .returning(self.model)
+            .returning(self.model.id)
         )
-        await self._session.execute(stmt)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none() is not None
 
     async def get_profiles(self) -> Sequence[Profile]:
         query = select(self.model).where(self.model.deleted_at.is_(None))
         result = await self._session.execute(query)
         return result.scalars().all()
 
-    async def get_profile_by_id(self, profile_id: str) -> Profile | None:
+    async def get_profile_by_id(self, profile_id: UUID) -> Profile | None:
         query = select(self.model).where(self.model.id == profile_id)
         result = await self._session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_profile_by_user_id(self, user_id: str) -> Profile | None:
+    async def get_profile_by_user_id(self, user_id: UUID) -> Profile | None:
         query = select(self.model).where(self.model.user_id == user_id)
         result = await self._session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_by_displayed_name(self, displayed_name: str) -> Profile | None:
+    async def get_profile_by_displayed_name(
+        self, displayed_name: str
+    ) -> Profile | None:
         query = select(self.model).where(self.model.displayed_name == displayed_name)
         result = await self._session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_profile_with_user_by_id(self, profile_id: str) -> Profile | None:
+    async def get_profile_with_user_by_id(self, profile_id: UUID) -> Profile | None:
         query = (
             select(self.model)
             .options(selectinload(self.model.user))
@@ -152,28 +162,31 @@ class ProfileRepository:
         result = await self._session.execute(query)
         return result.scalars().all()
 
-    async def soft_delete_profile(self, user_id: str) -> None:
+    async def soft_delete_profile(self, user_id: UUID) -> bool:
         stmt = (
             update(self.model)
             .where(and_(self.model.user_id == user_id, self.model.deleted_at.is_(None)))
             .values(deleted_at=func.now())
-            .returning(self.model)
+            .returning(self.model.id)
         )
-        await self._session.execute(stmt)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none() is not None
 
-    async def restore_profile(self, user_id: str) -> None:
+    async def restore_profile(self, user_id: UUID) -> bool:
         stmt = (
             update(self.model)
             .where(self.model.user_id == user_id)
             .values(deleted_at=None)
-            .returning(self.model)
+            .returning(self.model.id)
         )
-        await self._session.execute(stmt)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none() is not None
 
-    async def hard_delete_profile(self, user_id: str) -> None:
+    async def hard_delete_profile(self, user_id: UUID) -> bool:
         stmt = (
             delete(self.model)
             .where(self.model.user_id == user_id)
-            .returning(self.model)
+            .returning(self.model.id)
         )
-        await self._session.execute(stmt)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none() is not None

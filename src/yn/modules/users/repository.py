@@ -1,7 +1,8 @@
 from typing import Sequence
 from uuid import UUID
 
-from sqlalchemy import and_, delete, exists, func, insert, select, update
+from sqlalchemy import and_, delete, exists, func, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -14,40 +15,32 @@ class UserRepository:
     def __init__(self, session: AsyncSession):
         self._session = session
 
-    async def create(self, email: str, hashed_password: str, role: str) -> User:
+    async def create(self, email: str, hashed_password: str, role: str) -> User | None:
         stmt = (
-            insert(self.model)
+            pg_insert(self.model)
             .values(email=email, hashed_password=hashed_password, role=role)
+            .on_conflict_do_nothing(index_elements=[self.model.email])
             .returning(self.model)
         )
         result = await self._session.execute(stmt)
-        return result.scalar_one()
+        return result.scalar_one_or_none()
 
     async def update_password(self, user_id: UUID, new_hashed_password: str) -> None:
         stmt = (
             update(self.model)
             .where(self.model.id == user_id)
             .values(hashed_password=new_hashed_password)
-            .returning(self.model)
         )
         await self._session.execute(stmt)
 
     async def update_email(self, user_id: UUID, new_email: str) -> None:
         stmt = (
-            update(self.model)
-            .where(self.model.id == user_id)
-            .values(email=new_email)
-            .returning(self.model)
+            update(self.model).where(self.model.id == user_id).values(email=new_email)
         )
         await self._session.execute(stmt)
 
     async def update_role(self, user_id: UUID, new_role: str) -> None:
-        stmt = (
-            update(self.model)
-            .where(self.model.id == user_id)
-            .values(role=new_role)
-            .returning(self.model)
-        )
+        stmt = update(self.model).where(self.model.id == user_id).values(role=new_role)
         await self._session.execute(stmt)
 
     async def get_user_by_id(self, user_id: UUID) -> User | None:
@@ -91,29 +84,18 @@ class UserRepository:
         return result.scalars().all()
 
     async def activate_user(self, user_id: UUID) -> None:
-        stmt = (
-            update(self.model)
-            .where(self.model.id == user_id)
-            .values(is_active=True)
-            .returning(self.model)
-        )
+        stmt = update(self.model).where(self.model.id == user_id).values(is_active=True)
         await self._session.execute(stmt)
 
     async def deactivate_user(self, user_id: UUID) -> None:
         stmt = (
-            update(self.model)
-            .where(self.model.id == user_id)
-            .values(is_active=False)
-            .returning(self.model)
+            update(self.model).where(self.model.id == user_id).values(is_active=False)
         )
         await self._session.execute(stmt)
 
     async def restore_user(self, user_id: UUID) -> None:
         stmt = (
-            update(self.model)
-            .where(self.model.id == user_id)
-            .values(deleted_at=None)
-            .returning(self.model)
+            update(self.model).where(self.model.id == user_id).values(deleted_at=None)
         )
         await self._session.execute(stmt)
 
@@ -122,12 +104,11 @@ class UserRepository:
             update(self.model)
             .where(and_(self.model.id == user_id, self.model.deleted_at.is_(None)))
             .values(deleted_at=func.now())
-            .returning(self.model)
         )
         await self._session.execute(stmt)
 
     async def hard_delete_user(self, user_id: UUID) -> None:
-        stmt = delete(self.model).where(self.model.id == user_id).returning(self.model)
+        stmt = delete(self.model).where(self.model.id == user_id)
         await self._session.execute(stmt)
 
     async def is_email_taken(self, email: str) -> bool:

@@ -1,6 +1,9 @@
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
+
 from yn.modules.profiles.dto import ProfileDTO
+from yn.modules.profiles.errors import ProfileConflictError
 from yn.shared.unit_of_work import UnitOfWork
 
 
@@ -37,12 +40,15 @@ class ProfileService:
         bio: str | None = None,
         social_links: dict[str, str] | None = None,
     ) -> ProfileDTO:
-        profile = await self.uow.profiles.create(
-            user_id=str(user_id),
-            displayed_name=displayed_name,
-            bio=bio,
-            social_links=social_links,
-        )
+        try:
+            profile = await self.uow.profiles.create(
+                user_id=user_id,
+                displayed_name=displayed_name,
+                bio=bio,
+                social_links=social_links,
+            )
+        except IntegrityError as exc:
+            raise ProfileConflictError from exc
         return ProfileDTO.from_orm(profile)
 
     async def update_profile(
@@ -51,13 +57,16 @@ class ProfileService:
         displayed_name: str | None = None,
         bio: str | None = None,
         social_links: dict[str, str] | None = None,
-    ) -> None:
-        await self.uow.profiles.update(
-            user_id=str(user_id),
-            displayed_name=displayed_name,
-            bio=bio,
-            social_links=social_links,
-        )
+    ) -> bool:
+        try:
+            return await self.uow.profiles.update(
+                user_id=user_id,
+                displayed_name=displayed_name,
+                bio=bio,
+                social_links=social_links,
+            )
+        except IntegrityError as exc:
+            raise ProfileConflictError from exc
 
-    async def hard_delete_profile(self, user_id: UUID) -> None:
-        await self.uow.profiles.hard_delete_profile(str(user_id))
+    async def hard_delete_profile(self, user_id: UUID) -> bool:
+        return await self.uow.profiles.hard_delete_profile(user_id)
