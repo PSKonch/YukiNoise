@@ -28,17 +28,26 @@ class UserRepository:
             update(self.model)
             .where(self.model.id == user_id)
             .values(hashed_password=new_hashed_password)
+            .returning(self.model)
         )
         await self._session.execute(stmt)
 
     async def update_email(self, user_id: UUID, new_email: str) -> None:
         stmt = (
-            update(self.model).where(self.model.id == user_id).values(email=new_email)
+            update(self.model)
+            .where(self.model.id == user_id)
+            .values(email=new_email)
+            .returning(self.model)
         )
         await self._session.execute(stmt)
 
     async def update_role(self, user_id: UUID, new_role: str) -> None:
-        stmt = update(self.model).where(self.model.id == user_id).values(role=new_role)
+        stmt = (
+            update(self.model)
+            .where(self.model.id == user_id)
+            .values(role=new_role)
+            .returning(self.model)
+        )
         await self._session.execute(stmt)
 
     async def get_user_by_id(self, user_id: UUID) -> User | None:
@@ -82,18 +91,29 @@ class UserRepository:
         return result.scalars().all()
 
     async def activate_user(self, user_id: UUID) -> None:
-        stmt = update(self.model).where(self.model.id == user_id).values(is_active=True)
+        stmt = (
+            update(self.model)
+            .where(self.model.id == user_id)
+            .values(is_active=True)
+            .returning(self.model)
+        )
         await self._session.execute(stmt)
 
     async def deactivate_user(self, user_id: UUID) -> None:
         stmt = (
-            update(self.model).where(self.model.id == user_id).values(is_active=False)
+            update(self.model)
+            .where(self.model.id == user_id)
+            .values(is_active=False)
+            .returning(self.model)
         )
         await self._session.execute(stmt)
 
     async def restore_user(self, user_id: UUID) -> None:
         stmt = (
-            update(self.model).where(self.model.id == user_id).values(deleted_at=None)
+            update(self.model)
+            .where(self.model.id == user_id)
+            .values(deleted_at=None)
+            .returning(self.model)
         )
         await self._session.execute(stmt)
 
@@ -102,11 +122,12 @@ class UserRepository:
             update(self.model)
             .where(and_(self.model.id == user_id, self.model.deleted_at.is_(None)))
             .values(deleted_at=func.now())
+            .returning(self.model)
         )
         await self._session.execute(stmt)
 
     async def hard_delete_user(self, user_id: UUID) -> None:
-        stmt = delete(self.model).where(self.model.id == user_id)
+        stmt = delete(self.model).where(self.model.id == user_id).returning(self.model)
         await self._session.execute(stmt)
 
     async def is_email_taken(self, email: str) -> bool:

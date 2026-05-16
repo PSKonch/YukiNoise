@@ -48,7 +48,12 @@ class ProfileRepository:
         if social_links is not None:
             values["social_links"] = social_links
 
-        stmt = update(self.model).where(self.model.user_id == user_id).values(**values)
+        stmt = (
+            update(self.model)
+            .where(self.model.user_id == user_id)
+            .values(**values)
+            .returning(self.model)
+        )
         await self._session.execute(stmt)
 
     async def update_displayed_name(self, user_id: str, displayed_name: str) -> None:
@@ -56,11 +61,17 @@ class ProfileRepository:
             update(self.model)
             .where(self.model.user_id == user_id)
             .values(displayed_name=displayed_name)
+            .returning(self.model)
         )
         await self._session.execute(stmt)
 
     async def update_bio(self, user_id: str, bio: str) -> None:
-        stmt = update(self.model).where(self.model.user_id == user_id).values(bio=bio)
+        stmt = (
+            update(self.model)
+            .where(self.model.user_id == user_id)
+            .values(bio=bio)
+            .returning(self.model)
+        )
         await self._session.execute(stmt)
 
     async def update_social_links(
@@ -70,6 +81,7 @@ class ProfileRepository:
             update(self.model)
             .where(self.model.user_id == user_id)
             .values(social_links=social_links)
+            .returning(self.model)
         )
         await self._session.execute(stmt)
 
@@ -145,6 +157,7 @@ class ProfileRepository:
             update(self.model)
             .where(and_(self.model.user_id == user_id, self.model.deleted_at.is_(None)))
             .values(deleted_at=func.now())
+            .returning(self.model)
         )
         await self._session.execute(stmt)
 
@@ -153,9 +166,14 @@ class ProfileRepository:
             update(self.model)
             .where(self.model.user_id == user_id)
             .values(deleted_at=None)
+            .returning(self.model)
         )
         await self._session.execute(stmt)
 
     async def hard_delete_profile(self, user_id: str) -> None:
-        stmt = delete(self.model).where(self.model.user_id == user_id)
+        stmt = (
+            delete(self.model)
+            .where(self.model.user_id == user_id)
+            .returning(self.model)
+        )
         await self._session.execute(stmt)
