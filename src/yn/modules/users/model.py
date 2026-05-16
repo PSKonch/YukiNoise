@@ -1,8 +1,10 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
+from uuid import UUID as PyUUID
 from uuid import uuid4
 
-from sqlalchemy import UUID, Index, func
+from sqlalchemy import UUID as SA_UUID
+from sqlalchemy import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from yn.shared.database import Base
@@ -14,7 +16,9 @@ if TYPE_CHECKING:
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
+    id: Mapped[PyUUID] = mapped_column(
+        SA_UUID(as_uuid=True), primary_key=True, default=uuid4
+    )
     email: Mapped[str] = mapped_column(unique=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(nullable=False)
     role: Mapped[str] = mapped_column(

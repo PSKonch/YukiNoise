@@ -54,3 +54,8 @@ extend-select = ["FAST", "I"]
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "types-passlib (>=1.7.7.20260211,<2.0.0.0)"
+]

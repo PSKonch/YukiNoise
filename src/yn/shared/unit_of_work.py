@@ -1,3 +1,4 @@
+from types import TracebackType
 from typing import TYPE_CHECKING, AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,7 +39,12 @@ class UnitOfWork:
     async def __aenter__(self) -> "UnitOfWork":
         return self
 
-    async def __aexit__(self, exc_type, exc, tb) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
         if exc:
             await self._session.rollback()
         else:

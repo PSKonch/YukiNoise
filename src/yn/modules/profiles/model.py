@@ -1,8 +1,10 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
+from uuid import UUID as PyUUID
 from uuid import uuid4
 
-from sqlalchemy import UUID, Computed, ForeignKey, Index, func
+from sqlalchemy import UUID as SA_UUID
+from sqlalchemy import Computed, ForeignKey, Index, func
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,9 +20,11 @@ class Profile(Base):
         Index("ix_profiles_search_vector", "search_vector", postgresql_using="gin"),
     )
 
-    id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
-    user_id: Mapped[UUID] = mapped_column(
-        UUID,
+    id: Mapped[PyUUID] = mapped_column(
+        SA_UUID(as_uuid=True), primary_key=True, default=uuid4
+    )
+    user_id: Mapped[PyUUID] = mapped_column(
+        SA_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         unique=True,
         nullable=False,

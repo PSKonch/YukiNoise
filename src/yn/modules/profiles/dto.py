@@ -1,6 +1,10 @@
-from uuid import UUID
 from dataclasses import dataclass
 from datetime import datetime
+from typing import TYPE_CHECKING
+from uuid import UUID
+
+if TYPE_CHECKING:
+    from yn.modules.profiles.model import Profile
 
 
 @dataclass
@@ -14,7 +18,7 @@ class ProfileDTO:
     updated_at: datetime | None = None
 
     @classmethod
-    def from_orm(cls, profile) -> "ProfileDTO":
+    def from_orm(cls, profile: "Profile") -> "ProfileDTO":
         return cls(
             id=profile.id,
             user_id=profile.user_id,

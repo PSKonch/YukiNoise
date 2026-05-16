@@ -1,4 +1,5 @@
 import logging
+from typing import Any, Sequence
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
@@ -30,12 +31,13 @@ def register_exception_handlers(app: FastAPI) -> None:
         *,
         code: str,
         detail: str,
-        errors: list[dict] | None = None,
+        errors: Sequence[Any] | None = None,
         request_id: str | None = None,
-    ) -> dict:
-        payload = {"code": code, "detail": detail}
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {"code": code, "detail": detail}
         if errors is not None:
-            payload["errors"] = errors
+            # ensure it's a JSON-serializable list
+            payload["errors"] = list(errors)
         if request_id is not None:
             payload["request_id"] = request_id
         return payload

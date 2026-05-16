@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Any, Sequence
 from uuid import UUID
 
 from sqlalchemy import and_, delete, func, insert, or_, select, update
@@ -41,7 +41,7 @@ class ProfileRepository:
         bio: str | None = None,
         social_links: dict[str, str] | None = None,
     ) -> bool:
-        values = {}
+        values: dict[str, Any] = {}
         if displayed_name is not None:
             values["displayed_name"] = displayed_name
         if bio is not None:

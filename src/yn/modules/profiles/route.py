@@ -15,11 +15,11 @@ from yn.modules.users.dto import UserDTO
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
 
-@router.get("/me", response_model=ProfileRead)
+@router.get("/me")
 async def read_current_user_profile(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     profile_service: Annotated[ProfileService, Depends(get_profile_service)],
-):
+) -> ProfileRead:
     profile = await profile_service.get_profile_by_user_id(current_user.id)
     return ProfileRead.model_validate(profile, from_attributes=True)
 
@@ -29,7 +29,7 @@ async def update_current_user_profile(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     profile_service: Annotated[ProfileService, Depends(get_profile_service)],
     payload: ProfileUpdate,
-):
+) -> dict[str, str]:
     if (
         payload.displayed_name is None
         and payload.bio is None
@@ -54,7 +54,7 @@ async def update_current_user_profile(
 async def delete_current_user_profile(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     profile_service: Annotated[ProfileService, Depends(get_profile_service)],
-):
+) -> dict[str, str]:
     profile_exists = await profile_service.hard_delete_profile(user_id=current_user.id)
 
     if not profile_exists:
@@ -68,7 +68,7 @@ async def create_profile(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     profile_service: Annotated[ProfileService, Depends(get_profile_service)],
     payload: ProfileCreate,
-):
+) -> dict[str, str]:
     await profile_service.create_profile(
         user_id=current_user.id,
         displayed_name=payload.displayed_name,
@@ -78,11 +78,11 @@ async def create_profile(
     return {"detail": "Profile created successfully"}
 
 
-@router.get("/search", response_model=list[ProfileRead])
+@router.get("/search")
 async def search_profiles(
     query: str,
     profile_service: Annotated[ProfileService, Depends(get_profile_service)],
-):
+) -> list[ProfileRead]:
     profiles = await profile_service.full_text_search_profiles(query)
     return [
         ProfileRead.model_validate(profile, from_attributes=True)
@@ -93,7 +93,7 @@ async def search_profiles(
 @router.get("/")
 async def get_all_profiles(
     profile_service: Annotated[ProfileService, Depends(get_profile_service)],
-):
+) -> list[ProfileRead]:
     profiles = await profile_service.get_all_profiles()
     return [
         ProfileRead.model_validate(profile, from_attributes=True)
