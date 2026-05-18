@@ -62,7 +62,11 @@ class ProfileRepository:
         return result.scalar_one_or_none() is not None
 
     async def get_profiles(self) -> Sequence[Profile]:
-        query = select(self.model).where(self.model.deleted_at.is_(None))
+        query = (
+            select(self.model)
+            .where(self.model.deleted_at.is_(None))
+            .order_by(self.model.created_at.desc())
+        )
         result = await self._session.execute(query)
         return result.scalars().all()
 
@@ -96,9 +100,9 @@ class ProfileRepository:
         """
         Search profiles by displayed name and bio using full-text search
         """
-        ts_query = func.plainto_tsquery("english", search)
+        ts_query = func.websearch_to_tsquery("english", search)
 
-        rank = func.ts_rank(self.model.search_vector, ts_query)
+        rank = func.ts_rank_cd(self.model.search_vector, ts_query)
 
         query = (
             select(self.model)

@@ -19,6 +19,8 @@ class Profile(Base):
     __tablename__ = "profiles"
     __table_args__ = (
         Index("ix_profiles_search_vector", "search_vector", postgresql_using="gin"),
+        Index("ix_profiles_created_at", "created_at", postgresql_using="btree"),
+        Index("ix_deleted_at", "deleted_at", postgresql_using="btree"),
     )
 
     id: Mapped[PyUUID] = mapped_column(
