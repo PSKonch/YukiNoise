@@ -5,48 +5,42 @@ from uuid import uuid4
 
 from sqlalchemy import UUID as SA_UUID
 from sqlalchemy import Computed, ForeignKey, Index, func
-from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from yn.shared.database import Base
 
 if TYPE_CHECKING:
-    from yn.modules.posts.model import Post
-    from yn.modules.users.model import User
+    from yn.modules.profiles.model import Profile
 
 
-class Profile(Base):
-    __tablename__ = "profiles"
+class Post(Base):
+    __tablename__ = "posts"
     __table_args__ = (
-        Index("ix_profiles_search_vector", "search_vector", postgresql_using="gin"),
+        Index("ix_posts_search_vector", "search_vector", postgresql_using="gin"),
+        Index("ix_updated_at", "updated_at", postgresql_using="btree"),
     )
 
     id: Mapped[PyUUID] = mapped_column(
         SA_UUID(as_uuid=True), primary_key=True, default=uuid4
     )
-    user_id: Mapped[PyUUID] = mapped_column(
+    profile_id: Mapped[PyUUID] = mapped_column(
         SA_UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        unique=True,
+        ForeignKey("profiles.id"),
         nullable=False,
     )
-
-    displayed_name: Mapped[str] = mapped_column(unique=True, nullable=False)
-    bio: Mapped[str | None] = mapped_column(nullable=True)
+    title: Mapped[str] = mapped_column(nullable=False)
+    content: Mapped[str] = mapped_column(nullable=False)
     search_vector: Mapped[TSVECTOR] = mapped_column(
         TSVECTOR,
         Computed(
             """
-            setweight(to_tsvector('english', coalesce(displayed_name, '')), 'A') ||
-            setweight(to_tsvector('english', coalesce(bio, '')), 'B')
+            setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
+            setweight(to_tsvector('english', coalesce(content, '')), 'B')
             """,
             persisted=True,
         ),
         nullable=False,
-    )
-
-    social_links: Mapped[dict[str, str] | None] = mapped_column(
-        JSONB, nullable=True, default=None
     )
 
     created_at: Mapped[datetime] = mapped_column(
@@ -58,5 +52,4 @@ class Profile(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
     # relationships
-    user: Mapped["User"] = relationship("User", back_populates="profile")
-    posts: Mapped[list["Post"]] = relationship("Post", back_populates="profile")
+    profile: Mapped["Profile"] = relationship("Profile", back_populates="posts")
