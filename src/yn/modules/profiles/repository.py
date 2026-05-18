@@ -61,40 +61,12 @@ class ProfileRepository:
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-    async def update_displayed_name(self, user_id: UUID, displayed_name: str) -> bool:
-        stmt = (
-            update(self.model)
-            .where(self.model.user_id == user_id)
-            .values(displayed_name=displayed_name)
-            .returning(self.model.id)
-        )
-        result = await self._session.execute(stmt)
-        return result.scalar_one_or_none() is not None
-
-    async def update_bio(self, user_id: UUID, bio: str) -> bool:
-        stmt = (
-            update(self.model)
-            .where(self.model.user_id == user_id)
-            .values(bio=bio)
-            .returning(self.model.id)
-        )
-        result = await self._session.execute(stmt)
-        return result.scalar_one_or_none() is not None
-
-    async def update_social_links(
-        self, user_id: UUID, social_links: dict[str, str]
-    ) -> bool:
-        stmt = (
-            update(self.model)
-            .where(self.model.user_id == user_id)
-            .values(social_links=social_links)
-            .returning(self.model.id)
-        )
-        result = await self._session.execute(stmt)
-        return result.scalar_one_or_none() is not None
-
     async def get_profiles(self) -> Sequence[Profile]:
-        query = select(self.model).where(self.model.deleted_at.is_(None))
+        query = (
+            select(self.model)
+            .where(self.model.deleted_at.is_(None))
+            .order_by(self.model.created_at.desc())
+        )
         result = await self._session.execute(query)
         return result.scalars().all()
 
@@ -128,9 +100,9 @@ class ProfileRepository:
         """
         Search profiles by displayed name and bio using full-text search
         """
-        ts_query = func.plainto_tsquery("english", search)
+        ts_query = func.websearch_to_tsquery("english", search)
 
-        rank = func.ts_rank(self.model.search_vector, ts_query)
+        rank = func.ts_rank_cd(self.model.search_vector, ts_query)
 
         query = (
             select(self.model)

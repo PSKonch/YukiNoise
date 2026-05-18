@@ -24,6 +24,7 @@ class ProfileDTO:
             user_id=profile.user_id,
             displayed_name=profile.displayed_name,
             bio=getattr(profile, "bio", None),
+            social_links=getattr(profile, "social_links", None),
             created_at=getattr(profile, "created_at", None),
             updated_at=getattr(profile, "updated_at", None),
         )

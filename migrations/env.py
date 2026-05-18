@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from yn.modules.posts import model as _posts_model  # noqa: F401
 from yn.modules.profiles import model as _profiles_model  # noqa: F401
 from yn.modules.users import model as _users_model  # noqa: F401
 from yn.shared.database import Base
