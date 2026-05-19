@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from yn.shared.database import get_session
 
 if TYPE_CHECKING:
+    from yn.modules.posts.repository import PostRepository
     from yn.modules.profiles.repository import ProfileRepository
     from yn.modules.users.repository import UserRepository
 
@@ -15,6 +16,7 @@ class UnitOfWork:
         self._session = session
         self._users_repo: "UserRepository | None" = None
         self._profiles_repo: "ProfileRepository | None" = None
+        self._posts_repo: "PostRepository | None" = None
 
     @property
     def users(self) -> "UserRepository":
@@ -35,6 +37,16 @@ class UnitOfWork:
             ProfileRepository = getattr(repo_mod, "ProfileRepository")
             self._profiles_repo = ProfileRepository(self._session)
         return self._profiles_repo
+
+    @property
+    def posts(self) -> "PostRepository":
+        if self._posts_repo is None:
+            from importlib import import_module
+
+            repo_mod = import_module("yn.modules.posts.repository")
+            PostRepository = getattr(repo_mod, "PostRepository")
+            self._posts_repo = PostRepository(self._session)
+        return self._posts_repo
 
     async def __aenter__(self) -> "UnitOfWork":
         return self

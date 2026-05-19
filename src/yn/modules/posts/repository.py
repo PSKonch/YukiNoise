@@ -3,8 +3,10 @@ from uuid import UUID
 
 from sqlalchemy import and_, delete, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from yn.modules.posts.model import Post
+from yn.modules.profiles.model import Profile
 
 
 class PostRepository:
@@ -30,6 +32,7 @@ class PostRepository:
     async def update(
         self,
         post_id: UUID,
+        profile_id: UUID,
         title: str | None = None,
         content: str | None = None,
     ) -> bool:
@@ -44,16 +47,18 @@ class PostRepository:
 
         stmt = (
             update(self.model)
-            .where(self.model.id == post_id)
+            .where(and_(self.model.id == post_id, self.model.profile_id == profile_id))
             .values(**values)
             .returning(self.model.id)
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-    async def hard_delete(self, post_id: UUID) -> bool:
+    async def hard_delete(self, post_id: UUID, profile_id: UUID) -> bool:
         stmt = (
-            delete(self.model).where(self.model.id == post_id).returning(self.model.id)
+            delete(self.model)
+            .where(and_(self.model.id == post_id, self.model.profile_id == profile_id))
+            .returning(self.model.id)
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
@@ -61,6 +66,11 @@ class PostRepository:
     async def get_posts_by_profile_id(self, profile_id: UUID) -> Sequence[Post]:
         query = (
             select(self.model)
+            .options(
+                selectinload(self.model.profile).load_only(
+                    Profile.id, Profile.displayed_name
+                )
+            )
             .where(
                 and_(
                     self.model.profile_id == profile_id,
@@ -75,6 +85,11 @@ class PostRepository:
     async def get_posts(self) -> Sequence[Post]:
         query = (
             select(self.model)
+            .options(
+                selectinload(self.model.profile).load_only(
+                    Profile.id, Profile.displayed_name
+                )
+            )
             .where(self.model.deleted_at.is_(None))
             .order_by(self.model.created_at.desc())
         )
@@ -91,6 +106,11 @@ class PostRepository:
 
         query = (
             select(self.model)
+            .options(
+                selectinload(self.model.profile).load_only(
+                    Profile.id, Profile.displayed_name
+                )
+            )
             .where(
                 and_(
                     self.model.search_vector.op("@@")(ts_query),

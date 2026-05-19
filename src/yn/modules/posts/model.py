@@ -18,8 +18,8 @@ class Post(Base):
     __tablename__ = "posts"
     __table_args__ = (
         Index("ix_posts_search_vector", "search_vector", postgresql_using="gin"),
-        Index("ix_updated_at", "updated_at", postgresql_using="btree"),
-        Index("ix_created_at", "created_at", postgresql_using="btree"),
+        Index("ix_posts_updated_at", "updated_at", postgresql_using="btree"),
+        Index("ix_posts_created_at", "created_at", postgresql_using="btree"),
     )
 
     id: Mapped[PyUUID] = mapped_column(

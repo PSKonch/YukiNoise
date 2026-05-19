@@ -13,11 +13,11 @@ class UserService:
         self.uow = uow
 
     async def get_user_by_id(self, user_id: UUID) -> UserDTO | None:
-        user = await self.uow.users.get_user_by_id(user_id)
+        user = await self.uow.users.get_user_with_profile_by_id(user_id)
         return UserDTO.from_orm(user) if user else None
 
     async def get_user_by_email(self, email: str) -> UserDTO | None:
-        user = await self.uow.users.get_user_by_email(email)
+        user = await self.uow.users.get_user_with_profile_by_email(email)
         return UserDTO.from_orm(user) if user else None
 
     async def is_email_taken(self, email: str) -> bool:
@@ -35,7 +35,7 @@ class UserService:
         return UserDTO.from_orm(user)
 
     async def authenticate_user(self, email: str, password: str) -> UserDTO:
-        repo_user = await self.uow.users.get_user_by_email(email)
+        repo_user = await self.uow.users.get_user_with_profile_by_email(email)
         if not repo_user:
             raise InvalidLoginCredentialsError
         if not verify_password(password, repo_user.hashed_password):
