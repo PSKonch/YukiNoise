@@ -11,6 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from yn.shared.database import Base
 
 if TYPE_CHECKING:
+    from yn.modules.albums.model import Album
     from yn.modules.posts.model import Post
     from yn.modules.users.model import User
 
@@ -20,7 +21,7 @@ class Profile(Base):
     __table_args__ = (
         Index("ix_profiles_search_vector", "search_vector", postgresql_using="gin"),
         Index("ix_profiles_created_at", "created_at", postgresql_using="btree"),
-        Index("ix_deleted_at", "deleted_at", postgresql_using="btree"),
+        Index("ix_profiles_deleted_at", "deleted_at", postgresql_using="btree"),
     )
 
     id: Mapped[PyUUID] = mapped_column(
@@ -62,3 +63,4 @@ class Profile(Base):
     # relationships
     user: Mapped["User"] = relationship("User", back_populates="profile")
     posts: Mapped[list["Post"]] = relationship("Post", back_populates="profile")
+    albums: Mapped[list["Album"]] = relationship("Album", back_populates="profile")
