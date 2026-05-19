@@ -11,6 +11,7 @@ class UserDTO:
     email: str
     role: str
     is_active: bool
+    profile_id: UUID
     created_at: datetime | None = None
     updated_at: datetime | None = None
     deleted_at: datetime | None = None
@@ -22,6 +23,7 @@ class UserDTO:
             email=user.email,
             role=user.role,
             is_active=user.is_active,
+            profile_id=user.profile.id,
             created_at=getattr(user, "created_at", None),
             updated_at=getattr(user, "updated_at", None),
             deleted_at=getattr(user, "deleted_at", None),
