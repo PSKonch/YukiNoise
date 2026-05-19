@@ -21,7 +21,7 @@ async def read_current_user_profile(
     profile_service: Annotated[ProfileService, Depends(get_profile_service)],
 ) -> ProfileRead:
     profile = await profile_service.get_profile_by_user_id(current_user.id)
-    return ProfileRead.model_validate(profile, from_attributes=False)
+    return ProfileRead.model_validate(profile, from_attributes=True)
 
 
 @router.put("/me")
@@ -85,7 +85,7 @@ async def search_profiles(
 ) -> list[ProfileRead]:
     profiles = await profile_service.full_text_search_profiles(query)
     return [
-        ProfileRead.model_validate(profile, from_attributes=False)
+        ProfileRead.model_validate(profile, from_attributes=True)
         for profile in profiles
     ]
 
@@ -96,6 +96,6 @@ async def get_all_profiles(
 ) -> list[ProfileRead]:
     profiles = await profile_service.get_all_profiles()
     return [
-        ProfileRead.model_validate(profile, from_attributes=False)
+        ProfileRead.model_validate(profile, from_attributes=True)
         for profile in profiles
     ]
