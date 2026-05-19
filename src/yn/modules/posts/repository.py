@@ -3,8 +3,10 @@ from uuid import UUID
 
 from sqlalchemy import and_, delete, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from yn.modules.posts.model import Post
+from yn.modules.profiles.model import Profile
 
 
 class PostRepository:
@@ -61,6 +63,11 @@ class PostRepository:
     async def get_posts_by_profile_id(self, profile_id: UUID) -> Sequence[Post]:
         query = (
             select(self.model)
+            .options(
+                selectinload(self.model.profile).load_only(
+                    Profile.id, Profile.displayed_name
+                )
+            )
             .where(
                 and_(
                     self.model.profile_id == profile_id,
@@ -75,6 +82,11 @@ class PostRepository:
     async def get_posts(self) -> Sequence[Post]:
         query = (
             select(self.model)
+            .options(
+                selectinload(self.model.profile).load_only(
+                    Profile.id, Profile.displayed_name
+                )
+            )
             .where(self.model.deleted_at.is_(None))
             .order_by(self.model.created_at.desc())
         )
@@ -91,6 +103,11 @@ class PostRepository:
 
         query = (
             select(self.model)
+            .options(
+                selectinload(self.model.profile).load_only(
+                    Profile.id, Profile.displayed_name
+                )
+            )
             .where(
                 and_(
                     self.model.search_vector.op("@@")(ts_query),
