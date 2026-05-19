@@ -12,7 +12,6 @@ from yn.shared.database import Base
 
 if TYPE_CHECKING:
     from yn.modules.albums.model import Album
-    from yn.modules.profiles.model import Profile
 
 
 class Track(Base):
@@ -31,11 +30,6 @@ class Track(Base):
     id: Mapped[PyUUID] = mapped_column(
         SA_UUID(as_uuid=True), primary_key=True, default=uuid4
     )
-    profile_id: Mapped[PyUUID] = mapped_column(
-        SA_UUID(as_uuid=True),
-        ForeignKey("profiles.id", ondelete="CASCADE"),
-        nullable=False,
-    )
     album_id: Mapped[PyUUID] = mapped_column(
         SA_UUID(as_uuid=True),
         ForeignKey("albums.id", ondelete="CASCADE"),
@@ -52,5 +46,4 @@ class Track(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
     # Relationships
-    profile: Mapped["Profile"] = relationship("Profile", back_populates="tracks")
     album: Mapped["Album"] = relationship("Album", back_populates="tracks")

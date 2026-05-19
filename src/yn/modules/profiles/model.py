@@ -13,7 +13,6 @@ from yn.shared.database import Base
 if TYPE_CHECKING:
     from yn.modules.albums.model import Album
     from yn.modules.posts.model import Post
-    from yn.modules.tracks.model import Track
     from yn.modules.users.model import User
 
 
@@ -65,4 +64,3 @@ class Profile(Base):
     user: Mapped["User"] = relationship("User", back_populates="profile")
     posts: Mapped[list["Post"]] = relationship("Post", back_populates="profile")
     albums: Mapped[list["Album"]] = relationship("Album", back_populates="profile")
-    tracks: Mapped[list["Track"]] = relationship("Track", back_populates="profile")
