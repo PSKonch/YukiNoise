@@ -25,6 +25,11 @@ class PostRepository:
             insert(self.model)
             .values(profile_id=profile_id, title=title, content=content)
             .returning(self.model)
+            .options(
+                selectinload(self.model.profile).load_only(
+                    Profile.id, Profile.displayed_name
+                )
+            )
         )
         result = await self._session.execute(stmt)
         return result.scalar_one()
