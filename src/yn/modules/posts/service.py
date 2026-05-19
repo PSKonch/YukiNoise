@@ -32,6 +32,7 @@ class PostService:
     async def update_post(
         self,
         post_id: UUID,
+        profile_id: UUID,
         title: str | None = None,
         content: str | None = None,
     ) -> bool:
@@ -39,14 +40,14 @@ class PostService:
             raise EmptyPostUpdateError
 
         updated = await self.uow.posts.update(
-            post_id=post_id, title=title, content=content
+            post_id=post_id, profile_id=profile_id, title=title, content=content
         )
         if not updated:
             raise PostNotFoundError
         return updated
 
-    async def delete_post(self, post_id: UUID) -> bool:
-        deleted = await self.uow.posts.hard_delete(post_id)
+    async def delete_post(self, post_id: UUID, profile_id: UUID) -> bool:
+        deleted = await self.uow.posts.hard_delete(post_id, profile_id)
         if not deleted:
             raise PostNotFoundError
         return deleted

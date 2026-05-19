@@ -32,6 +32,7 @@ class PostRepository:
     async def update(
         self,
         post_id: UUID,
+        profile_id: UUID,
         title: str | None = None,
         content: str | None = None,
     ) -> bool:
@@ -46,16 +47,18 @@ class PostRepository:
 
         stmt = (
             update(self.model)
-            .where(self.model.id == post_id)
+            .where(and_(self.model.id == post_id, self.model.profile_id == profile_id))
             .values(**values)
             .returning(self.model.id)
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-    async def hard_delete(self, post_id: UUID) -> bool:
+    async def hard_delete(self, post_id: UUID, profile_id: UUID) -> bool:
         stmt = (
-            delete(self.model).where(self.model.id == post_id).returning(self.model.id)
+            delete(self.model)
+            .where(and_(self.model.id == post_id, self.model.profile_id == profile_id))
+            .returning(self.model.id)
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None

@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends
 from yn.modules.posts.deps import get_post_service
 from yn.modules.posts.errors import (
     EmptyPostUpdateError,
-    PostNotFoundError,
 )
 from yn.modules.posts.schemas import PostCreate, PostRead, PostUpdate
 from yn.modules.posts.service import PostService
@@ -27,7 +26,7 @@ async def create_post(
         title=payload.title,
         content=payload.content,
     )
-    return PostRead.model_validate(post, from_attributes=True)
+    return PostRead.model_validate(post, from_attributes=False)
 
 
 @router.put("/{post_id}")
@@ -40,12 +39,12 @@ async def update_post(
     if payload.title is None and payload.content is None:
         raise EmptyPostUpdateError
 
-    try:
-        await post_service.update_post(
-            post_id=post_id, title=payload.title, content=payload.content
-        )
-    except PostNotFoundError:
-        raise PostNotFoundError
+    await post_service.update_post(
+        post_id=post_id,
+        profile_id=current_user.profile_id,
+        title=payload.title,
+        content=payload.content,
+    )
 
     return {"detail": "Post updated successfully"}
 
@@ -56,10 +55,7 @@ async def delete_post(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     post_service: Annotated[PostService, Depends(get_post_service)],
 ) -> dict[str, str]:
-    try:
-        await post_service.delete_post(post_id=post_id)
-    except PostNotFoundError:
-        raise PostNotFoundError
+    await post_service.delete_post(post_id=post_id, profile_id=current_user.profile_id)
 
     return {"detail": "Post deleted successfully"}
 
@@ -70,7 +66,7 @@ async def search_posts(
     post_service: Annotated[PostService, Depends(get_post_service)],
 ) -> list[PostRead]:
     posts = await post_service.full_text_search_posts(query)
-    return [PostRead.model_validate(post, from_attributes=True) for post in posts]
+    return [PostRead.model_validate(post, from_attributes=False) for post in posts]
 
 
 @router.get("/")
@@ -78,4 +74,4 @@ async def get_posts(
     post_service: Annotated[PostService, Depends(get_post_service)],
 ) -> list[PostRead]:
     posts = await post_service.get_posts()
-    return [PostRead.model_validate(post, from_attributes=True) for post in posts]
+    return [PostRead.model_validate(post, from_attributes=False) for post in posts]
