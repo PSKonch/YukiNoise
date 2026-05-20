@@ -11,8 +11,8 @@ class ProfileService:
     def __init__(self, uow: UnitOfWork):
         self.uow = uow
 
-    async def get_all_profiles(self) -> list[ProfileDTO]:
-        profiles = await self.uow.profiles.get_profiles()
+    async def get_all_profiles(self, *, limit: int, offset: int) -> list[ProfileDTO]:
+        profiles = await self.uow.profiles.get_profiles(limit=limit, offset=offset)
         return [ProfileDTO.from_orm(profile) for profile in profiles]
 
     async def get_profile_by_user_id(self, user_id: UUID) -> ProfileDTO | None:
@@ -29,8 +29,18 @@ class ProfileService:
         profile = await self.uow.profiles.get_profile_by_displayed_name(displayed_name)
         return ProfileDTO.from_orm(profile) if profile else None
 
-    async def full_text_search_profiles(self, query: str) -> list[ProfileDTO]:
-        profiles = await self.uow.profiles.full_text_search_profiles(query)
+    async def full_text_search_profiles(
+        self,
+        query: str,
+        *,
+        limit: int,
+        offset: int,
+    ) -> list[ProfileDTO]:
+        profiles = await self.uow.profiles.full_text_search_profiles(
+            query,
+            limit=limit,
+            offset=offset,
+        )
         return [ProfileDTO.from_orm(profile) for profile in profiles]
 
     async def create_profile(

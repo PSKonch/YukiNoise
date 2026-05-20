@@ -41,7 +41,9 @@ class AlbumRepository:
         result = await self._session.execute(stmt)
         return result.scalar_one()
 
-    async def trgm_search_by_title(self, search_term: str) -> Sequence[Album]:
+    async def trgm_search_by_title(
+        self, search_term: str, limit: int, offset: int
+    ) -> Sequence[Album]:
         query = (
             select(self.model)
             .where(
@@ -51,20 +53,26 @@ class AlbumRepository:
                 )
             )
             .order_by(func.similarity(self.model.title, search_term).desc())
+            .limit(limit)
+            .offset(offset)
         )
         result = await self._session.execute(query)
         return result.scalars().all()
 
-    async def get_albums(self) -> Sequence[Album]:
+    async def get_albums(self, limit: int, offset: int) -> Sequence[Album]:
         query = (
             select(self.model)
             .where(self.model.deleted_at.is_(None))
             .order_by(self.model.created_at.desc())
+            .limit(limit)
+            .offset(offset)
         )
         result = await self._session.execute(query)
         return result.scalars().all()
 
-    async def get_albums_with_tracks_and_author_profile(self) -> Sequence[Album]:
+    async def get_albums_with_tracks_and_author_profile(
+        self, limit: int, offset: int
+    ) -> Sequence[Album]:
         query = (
             select(self.model)
             .options(
@@ -73,6 +81,8 @@ class AlbumRepository:
             )
             .where(self.model.deleted_at.is_(None))
             .order_by(self.model.created_at.desc())
+            .limit(limit)
+            .offset(offset)
         )
         result = await self._session.execute(query)
         return result.scalars().unique().all()

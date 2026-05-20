@@ -33,12 +33,18 @@ class AlbumService:
             raise AlbumConflictError from exc
         return AlbumDTO.from_orm(album)
 
-    async def get_albums(self) -> list[AlbumDTO]:
-        albums = await self.uow.albums.get_albums()
+    async def get_albums(self, *, limit: int, offset: int) -> list[AlbumDTO]:
+        albums = await self.uow.albums.get_albums(limit=limit, offset=offset)
         return [AlbumDTO.from_orm(album) for album in albums]
 
-    async def trgm_search_by_title(self, search_term: str) -> list[AlbumDTO]:
-        albums = await self.uow.albums.trgm_search_by_title(search_term)
+    async def trgm_search_by_title(
+        self, search_term: str, *, limit: int, offset: int
+    ) -> list[AlbumDTO]:
+        albums = await self.uow.albums.trgm_search_by_title(
+            search_term,
+            limit=limit,
+            offset=offset,
+        )
         return [AlbumDTO.from_orm(album) for album in albums]
 
     async def get_album_by_id(self, album_id: UUID) -> AlbumDTO:
@@ -60,7 +66,10 @@ class AlbumService:
         return AlbumDTO.from_orm(album)
 
     async def get_albums_with_tracks_and_author_profile(
-        self,
+        self, *, limit: int, offset: int
     ) -> list[AlbumWithTracksAndAuthorDTO]:
-        albums = await self.uow.albums.get_albums_with_tracks_and_author_profile()
+        albums = await self.uow.albums.get_albums_with_tracks_and_author_profile(
+            limit=limit,
+            offset=offset,
+        )
         return [AlbumWithTracksAndAuthorDTO.from_orm(album) for album in albums]

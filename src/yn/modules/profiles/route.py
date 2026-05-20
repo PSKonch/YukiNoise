@@ -11,6 +11,7 @@ from yn.modules.profiles.schemas import ProfileCreate, ProfileRead, ProfileUpdat
 from yn.modules.profiles.service import ProfileService
 from yn.modules.users.auth import get_current_user
 from yn.modules.users.dto import UserDTO
+from yn.shared.pagination import PaginationParams, get_pagination_params
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
@@ -82,8 +83,13 @@ async def create_profile(
 async def search_profiles(
     query: str,
     profile_service: Annotated[ProfileService, Depends(get_profile_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[ProfileRead]:
-    profiles = await profile_service.full_text_search_profiles(query)
+    profiles = await profile_service.full_text_search_profiles(
+        query,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
     return [
         ProfileRead.model_validate(profile, from_attributes=True)
         for profile in profiles
@@ -93,8 +99,12 @@ async def search_profiles(
 @router.get("/")
 async def get_all_profiles(
     profile_service: Annotated[ProfileService, Depends(get_profile_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[ProfileRead]:
-    profiles = await profile_service.get_all_profiles()
+    profiles = await profile_service.get_all_profiles(
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
     return [
         ProfileRead.model_validate(profile, from_attributes=True)
         for profile in profiles

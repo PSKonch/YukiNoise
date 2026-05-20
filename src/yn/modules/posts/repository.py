@@ -68,7 +68,9 @@ class PostRepository:
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-    async def get_posts_by_profile_id(self, profile_id: UUID) -> Sequence[Post]:
+    async def get_posts_by_profile_id(
+        self, profile_id: UUID, limit: int, offset: int
+    ) -> Sequence[Post]:
         query = (
             select(self.model)
             .options(
@@ -83,11 +85,13 @@ class PostRepository:
                 )
             )
             .order_by(self.model.created_at.desc())
+            .limit(limit)
+            .offset(offset)
         )
         result = await self._session.execute(query)
         return result.scalars().all()
 
-    async def get_posts(self) -> Sequence[Post]:
+    async def get_posts(self, limit: int, offset: int) -> Sequence[Post]:
         query = (
             select(self.model)
             .options(
@@ -97,11 +101,15 @@ class PostRepository:
             )
             .where(self.model.deleted_at.is_(None))
             .order_by(self.model.created_at.desc())
+            .limit(limit)
+            .offset(offset)
         )
         result = await self._session.execute(query)
         return result.scalars().all()
 
-    async def full_text_search_posts(self, search: str) -> Sequence[Post]:
+    async def full_text_search_posts(
+        self, search: str, limit: int, offset: int
+    ) -> Sequence[Post]:
         """
         Search posts by title and content using full-text search
         """
@@ -123,6 +131,8 @@ class PostRepository:
                 )
             )
             .order_by(rank.desc())
+            .limit(limit)
+            .offset(offset)
         )
         result = await self._session.execute(query)
         return result.scalars().all()
