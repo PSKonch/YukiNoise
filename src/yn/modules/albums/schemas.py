@@ -4,6 +4,19 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 
+class TrackRead(BaseModel):
+    id: UUID
+    album_id: UUID
+    title: str
+    duration_seconds: int
+    path: str
+    genres: list[str]
+    created_at: datetime | None = None
+    deleted_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class AlbumBase(BaseModel):
     title: str
     description: str | None = None
@@ -28,3 +41,8 @@ class AlbumRead(AlbumBase):
     deleted_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AlbumWithTracksAndAuthorRead(AlbumRead):
+    author_name: str | None = None
+    tracks: list[TrackRead] = []

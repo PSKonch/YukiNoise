@@ -7,20 +7,17 @@ from fastapi import FastAPI
 from yn.modules.albums.route import router as albums_router
 from yn.modules.posts.route import router as posts_router
 from yn.modules.profiles.route import router as profiles_router
+from yn.modules.tracks.route import router as tracks_router
 from yn.modules.users.route import router as users_router
 from yn.shared.errors import register_exception_handlers
-from yn.shared.minio import MinioStorage
+from yn.shared.minio import MinioStorage, set_minio_storage
 from yn.shared.settings import settings
-
-# Global MinIO storage instance
-minio_storage: MinioStorage | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
     print("Starting up...")
-    global minio_storage
 
     minio_storage = MinioStorage.create(
         {
@@ -30,6 +27,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "secure": settings.minio_secure,
         }
     )
+    set_minio_storage(minio_storage)
 
     # Create bucket if it doesn't exist
     if await minio_storage.bucket_exists(settings.minio_bucket):
@@ -42,8 +40,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Shutdown
     print("Shutting down...")
-    if minio_storage:
-        await minio_storage.close()
+    await minio_storage.close()
+    set_minio_storage(None)
 
 
 app = FastAPI(
@@ -56,9 +54,9 @@ app = FastAPI(
 
 def get_minio() -> MinioStorage:
     """Get the MinIO storage instance."""
-    if minio_storage is None:
-        raise RuntimeError("MinIO storage not initialized")
-    return minio_storage
+    from yn.shared.minio import get_minio_storage
+
+    return get_minio_storage()
 
 
 register_exception_handlers(app)
@@ -67,6 +65,7 @@ app.include_router(users_router)
 app.include_router(profiles_router)
 app.include_router(posts_router)
 app.include_router(albums_router)
+app.include_router(tracks_router)
 
 
 @app.get("/")

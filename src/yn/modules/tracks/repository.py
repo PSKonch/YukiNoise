@@ -15,6 +15,7 @@ class TrackRepository:
 
     async def create(
         self,
+        track_id: UUID,
         album_id: UUID,
         title: str,
         duration_seconds: int,
@@ -24,6 +25,7 @@ class TrackRepository:
         stmt = (
             insert(self.model)
             .values(
+                id=track_id,
                 album_id=album_id,
                 title=title,
                 duration_seconds=duration_seconds,

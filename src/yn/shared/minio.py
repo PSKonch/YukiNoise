@@ -14,6 +14,9 @@ class StorageObject:
     size: int
 
 
+_minio_storage: "MinioStorage | None" = None
+
+
 class MinioStorage:
     def __init__(
         self, endpoint: str, access_key: str, secret_key: str, secure: bool = True
@@ -113,3 +116,14 @@ class MinioStorage:
             if isinstance(e, S3Error) and e.code == "NoSuchBucket":
                 return
             raise
+
+
+def set_minio_storage(storage: "MinioStorage | None") -> None:
+    global _minio_storage
+    _minio_storage = storage
+
+
+def get_minio_storage() -> "MinioStorage":
+    if _minio_storage is None:
+        raise RuntimeError("MinIO storage not initialized")
+    return _minio_storage

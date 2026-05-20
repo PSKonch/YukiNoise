@@ -3,7 +3,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from yn.modules.albums.deps import get_album_service
-from yn.modules.albums.schemas import AlbumCreate, AlbumRead
+from yn.modules.albums.schemas import (
+    AlbumCreate,
+    AlbumRead,
+    AlbumWithTracksAndAuthorRead,
+)
 from yn.modules.albums.service import AlbumService
 from yn.modules.profiles.errors import ProfileNotFoundError
 from yn.modules.users.auth import get_current_user
@@ -45,3 +49,14 @@ async def search_albums(
 ) -> list[AlbumRead]:
     albums = await album_service.trgm_search_by_title(search_term)
     return [AlbumRead.model_validate(album, from_attributes=True) for album in albums]
+
+
+@router.get("/with-tracks-and-author")
+async def get_albums_with_tracks_and_author_profile(
+    album_service: Annotated[AlbumService, Depends(get_album_service)],
+) -> list[AlbumWithTracksAndAuthorRead]:
+    albums = await album_service.get_albums_with_tracks_and_author_profile()
+    return [
+        AlbumWithTracksAndAuthorRead.model_validate(album, from_attributes=True)
+        for album in albums
+    ]

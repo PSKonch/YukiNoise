@@ -2,7 +2,7 @@ from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 
-from yn.modules.albums.dto import AlbumDTO
+from yn.modules.albums.dto import AlbumDTO, AlbumWithTracksAndAuthorDTO
 from yn.modules.albums.errors import AlbumConflictError
 from yn.shared.unit_of_work import UnitOfWork
 
@@ -36,3 +36,9 @@ class AlbumService:
     async def trgm_search_by_title(self, search_term: str) -> list[AlbumDTO]:
         albums = await self.uow.albums.trgm_search_by_title(search_term)
         return [AlbumDTO.from_orm(album) for album in albums]
+
+    async def get_albums_with_tracks_and_author_profile(
+        self,
+    ) -> list[AlbumWithTracksAndAuthorDTO]:
+        albums = await self.uow.albums.get_albums_with_tracks_and_author_profile()
+        return [AlbumWithTracksAndAuthorDTO.from_orm(album) for album in albums]

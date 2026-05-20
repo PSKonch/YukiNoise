@@ -3,10 +3,9 @@ from uuid import UUID
 
 from sqlalchemy import and_, func, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload, selectinload
 
 from yn.modules.albums.model import Album
-from yn.modules.profiles.model import Profile
-from yn.modules.tracks.model import Track
 
 
 class AlbumRepository:
@@ -14,6 +13,13 @@ class AlbumRepository:
 
     def __init__(self, session: AsyncSession):
         self._session = session
+
+    async def get_album_by_id(self, album_id: UUID) -> Album | None:
+        query = select(self.model).where(
+            and_(self.model.id == album_id, self.model.deleted_at.is_(None))
+        )
+        result = await self._session.execute(query)
+        return result.scalar_one_or_none()
 
     async def create(
         self,
@@ -60,13 +66,13 @@ class AlbumRepository:
 
     async def get_albums_with_tracks_and_author_profile(self) -> Sequence[Album]:
         query = (
-            select(
-                self.model, Profile.displayed_name, Track.title, Track.duration_seconds
+            select(self.model)
+            .options(
+                joinedload(self.model.profile),
+                selectinload(self.model.tracks),
             )
-            .join(Profile, self.model.profile_id == Profile.id)
-            .join(Track, Track.album_id == self.model.id)
             .where(self.model.deleted_at.is_(None))
             .order_by(self.model.created_at.desc())
         )
         result = await self._session.execute(query)
-        return result.scalars().all()
+        return result.scalars().unique().all()
