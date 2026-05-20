@@ -8,22 +8,21 @@ from uuid import UUID, uuid4
 from fastapi import UploadFile
 from sqlalchemy.exc import IntegrityError
 
+from yn.modules.albums.service import AlbumService
 from yn.modules.tracks.dto import TrackDTO
-from yn.modules.tracks.errors import (
-    AlbumAccessDeniedError,
-    AlbumNotFoundError,
-    TrackMetadataError,
-    TrackUploadFailedError,
-)
+from yn.modules.tracks.errors import TrackMetadataError, TrackUploadFailedError
 from yn.shared.minio import MinioStorage
 from yn.shared.settings import settings
 from yn.shared.unit_of_work import UnitOfWork
 
 
 class TrackService:
-    def __init__(self, uow: UnitOfWork, storage: MinioStorage):
+    def __init__(
+        self, uow: UnitOfWork, storage: MinioStorage, album_service: AlbumService
+    ):
         self.uow = uow
         self.storage = storage
+        self.album_service = album_service
 
     async def upload_track(
         self,
@@ -34,11 +33,10 @@ class TrackService:
         genres: list[str],
         file: UploadFile,
     ) -> TrackDTO:
-        album = await self.uow.albums.get_album_by_id(album_id)
-        if album is None:
-            raise AlbumNotFoundError
-        if album.profile_id != current_profile_id:
-            raise AlbumAccessDeniedError
+        await self.album_service.get_owned_album_by_id(
+            album_id=album_id,
+            profile_id=current_profile_id,
+        )
 
         track_id = uuid4()
         storage_key = self._build_storage_key(
@@ -62,9 +60,7 @@ class TrackService:
             raise TrackUploadFailedError from exc
         except Exception as exc:
             await self._safe_delete_from_storage(storage_key)
-            if isinstance(
-                exc, (AlbumNotFoundError, AlbumAccessDeniedError, TrackMetadataError)
-            ):
+            if isinstance(exc, TrackMetadataError):
                 raise
             raise TrackUploadFailedError from exc
         finally:
