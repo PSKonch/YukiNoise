@@ -20,6 +20,12 @@ class Album(Base):
         Index("ix_albums_created_at", "created_at", postgresql_using="btree"),
         Index("ix_albums_updated_at", "updated_at", postgresql_using="btree"),
         Index("ix_albums_deleted_at", "deleted_at", postgresql_using="btree"),
+        Index(
+            "ix_albums_title_trgm",
+            "title",
+            postgresql_using="gin",
+            postgresql_ops={"title": "gin_trgm_ops"},
+        ),
     )
 
     id: Mapped[PyUUID] = mapped_column(

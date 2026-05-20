@@ -28,6 +28,20 @@ class Settings(BaseSettings):
     minio_secure: bool = False
     minio_bucket: str = "tracks"
 
+    rabbitmq_host: str = "127.0.0.1"
+    rabbitmq_port: int = 5672
+    rabbitmq_user: str = "guest"
+    rabbitmq_password: str = "guest"
+    rabbitmq_managment_port: int = 15672
+
+    @property
+    def rabbitmq_url(self) -> str:
+        return f"amqp://{self.rabbitmq_user}:{self.rabbitmq_password}@{self.rabbitmq_host}:{self.rabbitmq_port}"
+
+    @property
+    def rabbitmq_management_url(self) -> str:
+        return f"http://{self.rabbitmq_user}:{self.rabbitmq_password}@{self.rabbitmq_host}:{self.rabbitmq_managment_port}"
+
     model_config = SettingsConfigDict(env_file=".env")
 
 
