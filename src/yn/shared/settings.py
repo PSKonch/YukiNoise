@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     )
     algorithm: str = "HS256"
 
+    minio_endpoint: str = "127.0.0.1:9000"
+    minio_access_key: str = "minioadmin"
+    minio_secret_key: str = "minioadmin"
+    minio_secure: bool = False
+    minio_bucket: str = "tracks"
+
     model_config = SettingsConfigDict(env_file=".env")
 
 
