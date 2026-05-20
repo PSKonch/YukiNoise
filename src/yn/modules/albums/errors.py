@@ -1,0 +1,2 @@
+class AlbumConflictError(Exception):
+    pass

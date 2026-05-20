@@ -3,8 +3,8 @@ from typing import AsyncGenerator
 
 import uvicorn
 from fastapi import FastAPI
-from minio.error import S3Error  # type: ignore[import-untyped]
 
+from yn.modules.albums.route import router as albums_router
 from yn.modules.posts.route import router as posts_router
 from yn.modules.profiles.route import router as profiles_router
 from yn.modules.users.route import router as users_router
@@ -32,15 +32,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
 
     # Create bucket if it doesn't exist
-    try:
-        await minio_storage._client.stat_bucket(settings.minio_bucket)
+    if await minio_storage.bucket_exists(settings.minio_bucket):
         print(f"Bucket '{settings.minio_bucket}' already exists")
-    except S3Error as e:
-        if e.code == "NoSuchBucket":
-            await minio_storage._client.make_bucket(settings.minio_bucket)
-            print(f"Bucket '{settings.minio_bucket}' created successfully")
-        else:
-            raise
+    else:
+        await minio_storage.make_bucket(settings.minio_bucket)
+        print(f"Bucket '{settings.minio_bucket}' created successfully")
 
     yield
 
@@ -70,6 +66,7 @@ register_exception_handlers(app)
 app.include_router(users_router)
 app.include_router(profiles_router)
 app.include_router(posts_router)
+app.include_router(albums_router)
 
 
 @app.get("/")

@@ -41,7 +41,7 @@ class TrackRepository:
             .where(
                 and_(
                     self.model.deleted_at.is_(None),
-                    self.model.title.op("%%")(search_term),
+                    self.model.title.op("%")(search_term),
                 )
             )
             .order_by(func.similarity(self.model.title, search_term).desc())
