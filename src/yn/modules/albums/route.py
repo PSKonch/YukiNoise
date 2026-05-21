@@ -3,9 +3,16 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, UploadFile
 
+from yn.modules.albums.cover_uploader import (
+    AlbumPictureUploadPayload,
+    build_album_picture_storage_key,
+    copy_upload_to_shared_tempfile,
+)
 from yn.modules.albums.deps import get_album_service
+from yn.modules.albums.errors import AlbumPictureUploadFailedError
 from yn.modules.albums.schemas import (
     AlbumCreate,
+    AlbumPictureUploadAccepted,
     AlbumRead,
     AlbumWithTracksAndAuthorRead,
 )
@@ -14,6 +21,7 @@ from yn.modules.profiles.errors import ProfileNotFoundError
 from yn.modules.users.auth import get_current_user
 from yn.modules.users.dto import UserDTO
 from yn.shared.pagination import PaginationParams, get_pagination_params
+from yn.tasks.album_picture_upload import process_album_picture_upload
 
 router = APIRouter(prefix="/albums", tags=["albums"])
 
@@ -42,16 +50,40 @@ async def upload_album_picture(
     album_service: Annotated[AlbumService, Depends(get_album_service)],
     album_id: UUID,
     picture: Annotated[UploadFile, File(...)],
-) -> AlbumRead:
+) -> AlbumPictureUploadAccepted:
     if current_user.profile_id is None:
         raise ProfileNotFoundError
 
-    album = await album_service.upload_album_picture(
+    await album_service.get_owned_album_by_id(
         album_id=album_id,
         profile_id=current_user.profile_id,
-        file=picture,
     )
-    return AlbumRead.model_validate(album, from_attributes=True)
+
+    temp_path = await copy_upload_to_shared_tempfile(picture)
+    picture_path = build_album_picture_storage_key(
+        album_id=album_id,
+        filename=picture.filename,
+    )
+
+    try:
+        await process_album_picture_upload.kiq(
+            payload=AlbumPictureUploadPayload(
+                album_id=album_id,
+                profile_id=current_user.profile_id,
+                picture_path=picture_path,
+                temp_path=temp_path,
+            ).to_message()
+        )
+    except Exception as exc:
+        from pathlib import Path
+
+        try:
+            Path(temp_path).unlink(missing_ok=True)
+        except Exception:
+            pass
+        raise AlbumPictureUploadFailedError from exc
+
+    return AlbumPictureUploadAccepted(album_id=album_id)
 
 
 @router.get("/")
