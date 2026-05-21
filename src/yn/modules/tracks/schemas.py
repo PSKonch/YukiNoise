@@ -22,3 +22,11 @@ class TrackRead(TrackBase):
     deleted_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TrackUploadAccepted(TrackBase):
+    track_id: UUID
+    album_id: UUID
+    status: str = "queued"
+
+    model_config = ConfigDict(from_attributes=True)

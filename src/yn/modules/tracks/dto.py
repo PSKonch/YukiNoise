@@ -30,3 +30,11 @@ class TrackDTO:
             created_at=getattr(track, "created_at", None),
             deleted_at=getattr(track, "deleted_at", None),
         )
+
+
+@dataclass
+class TrackUploadQueuedDTO:
+    track_id: UUID
+    album_id: UUID
+    title: str
+    status: str = "queued"

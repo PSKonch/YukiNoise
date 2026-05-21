@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from yn.modules.profiles.errors import ProfileNotFoundError
 from yn.modules.tracks.deps import get_track_service
-from yn.modules.tracks.schemas import TrackRead
+from yn.modules.tracks.schemas import TrackUploadAccepted
 from yn.modules.tracks.service import TrackService
 from yn.modules.users.auth import get_current_user
 from yn.modules.users.dto import UserDTO
@@ -21,7 +21,7 @@ async def upload_track(
     title: Annotated[str, Form(...)],
     file: Annotated[UploadFile, File(...)],
     genres: Annotated[list[str] | None, Form()] = None,
-) -> TrackRead:
+) -> TrackUploadAccepted:
     if current_user.profile_id is None:
         raise ProfileNotFoundError
 
@@ -32,4 +32,4 @@ async def upload_track(
         genres=genres or [],
         file=file,
     )
-    return TrackRead.model_validate(track, from_attributes=True)
+    return TrackUploadAccepted.model_validate(track, from_attributes=True)

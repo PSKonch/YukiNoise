@@ -1,6 +1,7 @@
 from typing import Annotated
+from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, UploadFile
 
 from yn.modules.albums.deps import get_album_service
 from yn.modules.albums.schemas import (
@@ -12,6 +13,7 @@ from yn.modules.albums.service import AlbumService
 from yn.modules.profiles.errors import ProfileNotFoundError
 from yn.modules.users.auth import get_current_user
 from yn.modules.users.dto import UserDTO
+from yn.shared.pagination import PaginationParams, get_pagination_params
 
 router = APIRouter(prefix="/albums", tags=["albums"])
 
@@ -34,11 +36,33 @@ async def create_album(
     return AlbumRead.model_validate(album, from_attributes=True)
 
 
+@router.patch("/{album_id}/picture")
+async def upload_album_picture(
+    current_user: Annotated[UserDTO, Depends(get_current_user)],
+    album_service: Annotated[AlbumService, Depends(get_album_service)],
+    album_id: UUID,
+    picture: Annotated[UploadFile, File(...)],
+) -> AlbumRead:
+    if current_user.profile_id is None:
+        raise ProfileNotFoundError
+
+    album = await album_service.upload_album_picture(
+        album_id=album_id,
+        profile_id=current_user.profile_id,
+        file=picture,
+    )
+    return AlbumRead.model_validate(album, from_attributes=True)
+
+
 @router.get("/")
 async def get_albums(
     album_service: Annotated[AlbumService, Depends(get_album_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[AlbumRead]:
-    albums = await album_service.get_albums()
+    albums = await album_service.get_albums(
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
     return [AlbumRead.model_validate(album, from_attributes=True) for album in albums]
 
 
@@ -46,16 +70,25 @@ async def get_albums(
 async def search_albums(
     search_term: str,
     album_service: Annotated[AlbumService, Depends(get_album_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[AlbumRead]:
-    albums = await album_service.trgm_search_by_title(search_term)
+    albums = await album_service.trgm_search_by_title(
+        search_term,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
     return [AlbumRead.model_validate(album, from_attributes=True) for album in albums]
 
 
 @router.get("/with-tracks-and-author")
 async def get_albums_with_tracks_and_author_profile(
     album_service: Annotated[AlbumService, Depends(get_album_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[AlbumWithTracksAndAuthorRead]:
-    albums = await album_service.get_albums_with_tracks_and_author_profile()
+    albums = await album_service.get_albums_with_tracks_and_author_profile(
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
     return [
         AlbumWithTracksAndAuthorRead.model_validate(album, from_attributes=True)
         for album in albums

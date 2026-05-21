@@ -16,16 +16,6 @@ if TYPE_CHECKING:
 
 class Track(Base):
     __tablename__ = "tracks"
-    __table_args__ = (
-        Index("ix_tracks_created_at", "created_at", postgresql_using="btree"),
-        Index("ix_tracks_deleted_at", "deleted_at", postgresql_using="btree"),
-        Index(
-            "ix_tracks_title_trgm",
-            "title",
-            postgresql_using="gin",
-            postgresql_ops={"title": "gin_trgm_ops"},
-        ),
-    )
 
     id: Mapped[PyUUID] = mapped_column(
         SA_UUID(as_uuid=True), primary_key=True, default=uuid4
@@ -44,6 +34,24 @@ class Track(Base):
         nullable=False, server_default=func.now()
     )
     deleted_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
+    __table_args__ = (
+        Index("ix_tracks_created_at", "created_at", postgresql_using="btree"),
+        Index("ix_tracks_deleted_at", "deleted_at", postgresql_using="btree"),
+        Index(
+            "ix_tracks_title_trgm",
+            "title",
+            postgresql_using="gin",
+            postgresql_ops={"title": "gin_trgm_ops"},
+        ),
+        Index(
+            "uq_tracks_album_title_active",
+            "album_id",
+            func.lower(title),
+            unique=True,
+            postgresql_where=deleted_at.is_(None),
+        ),
+    )
 
     # Relationships
     album: Mapped["Album"] = relationship("Album", back_populates="tracks")

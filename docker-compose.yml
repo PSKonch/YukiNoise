@@ -16,30 +16,15 @@ services:
       timeout: 5s
       retries: 10
 
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    depends_on:
-      db:
-        condition: service_healthy
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: yukinoise
-      POSTGRES_HOST: db
-      APP_HOST: 0.0.0.0
-      APP_PORT: 8000
-      APP_WORKERS: 1
-      MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-      MINIO_SECURE: "false"
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
     ports:
-      - "8000:8000"
-    volumes:
-      - ./src:/opt/app/src
-    command: uvicorn yn.main:app --host 0.0.0.0 --port 8000 --reload
+      - "5672:5672"
+      - "15672:15672"
 
   minio:
     image: minio/minio:latest
@@ -53,7 +38,71 @@ services:
     volumes:
       - minio_data:/data
 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+      minio:
+        condition: service_started
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: yukinoise
+      POSTGRES_HOST: db
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8000
+      APP_WORKERS: 1
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_SECURE: "false"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      UPLOAD_TEMP_DIR: /tmp/yukinoise/uploads
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/opt/app/src
+      - track_upload_tmp:/tmp/yukinoise/uploads
+    command: uvicorn yn.main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+      minio:
+        condition: service_started
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: yukinoise
+      POSTGRES_HOST: db
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_SECURE: "false"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      UPLOAD_TEMP_DIR: /tmp/yukinoise/uploads
+    volumes:
+      - ./src:/opt/app/src
+      - track_upload_tmp:/tmp/yukinoise/uploads
+    command: taskiq worker yn.tasks.track_upload:broker
+
 volumes:
   postgres_data:
   minio_data:
+  track_upload_tmp:
 

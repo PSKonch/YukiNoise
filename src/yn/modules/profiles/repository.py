@@ -61,11 +61,13 @@ class ProfileRepository:
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-    async def get_profiles(self) -> Sequence[Profile]:
+    async def get_profiles(self, limit: int, offset: int) -> Sequence[Profile]:
         query = (
             select(self.model)
             .where(self.model.deleted_at.is_(None))
             .order_by(self.model.created_at.desc())
+            .limit(limit)
+            .offset(offset)
         )
         result = await self._session.execute(query)
         return result.scalars().all()
@@ -96,7 +98,9 @@ class ProfileRepository:
         result = await self._session.execute(query)
         return result.scalar_one_or_none()
 
-    async def full_text_search_profiles(self, search: str) -> Sequence[Profile]:
+    async def full_text_search_profiles(
+        self, search: str, limit: int, offset: int
+    ) -> Sequence[Profile]:
         """
         Search profiles by displayed name and bio using full-text search
         """
@@ -113,11 +117,15 @@ class ProfileRepository:
                 )
             )
             .order_by(rank.desc())
+            .limit(limit)
+            .offset(offset)
         )
         result = await self._session.execute(query)
         return result.scalars().all()
 
-    async def ilike_search_profiles(self, search: str) -> Sequence[Profile]:
+    async def ilike_search_profiles(
+        self, search: str, limit: int, offset: int
+    ) -> Sequence[Profile]:
         """
         Search profiles by displayed name and bio using ILIKE
         """
@@ -130,6 +138,8 @@ class ProfileRepository:
                 ),
                 self.model.deleted_at.is_(None),
             )
+            .limit(limit)
+            .offset(offset)
         )
         result = await self._session.execute(query)
         return result.scalars().all()

@@ -12,6 +12,7 @@ from yn.modules.posts.service import PostService
 from yn.modules.profiles.errors import ProfileNotFoundError
 from yn.modules.users.auth import get_current_user
 from yn.modules.users.dto import UserDTO
+from yn.shared.pagination import PaginationParams, get_pagination_params
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
@@ -74,14 +75,23 @@ async def delete_post(
 async def search_posts(
     query: str,
     post_service: Annotated[PostService, Depends(get_post_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[PostRead]:
-    posts = await post_service.full_text_search_posts(query)
+    posts = await post_service.full_text_search_posts(
+        query,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
     return [PostRead.model_validate(post, from_attributes=True) for post in posts]
 
 
 @router.get("/")
 async def get_posts(
     post_service: Annotated[PostService, Depends(get_post_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[PostRead]:
-    posts = await post_service.get_posts()
+    posts = await post_service.get_posts(
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
     return [PostRead.model_validate(post, from_attributes=True) for post in posts]

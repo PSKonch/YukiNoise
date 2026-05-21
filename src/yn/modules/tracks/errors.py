@@ -1,22 +1,22 @@
 from yn.shared.errors import AppError
 
 
-class AlbumNotFoundError(AppError):
-    status_code = 404
-    code = "album_not_found"
-    detail = "Album not found"
-
-
-class AlbumAccessDeniedError(AppError):
-    status_code = 403
-    code = "album_access_denied"
-    detail = "You do not have access to this album"
-
-
 class TrackUploadFailedError(AppError):
     status_code = 500
     code = "track_upload_failed"
     detail = "Track upload failed"
+
+
+class TrackConflictError(AppError):
+    status_code = 409
+    code = "track_conflict"
+    detail = "A track with this title already exists in the album"
+
+
+class TrackFormatError(AppError):
+    status_code = 415
+    code = "track_format_not_supported"
+    detail = "Only WAV and MP3 files are supported"
 
 
 class TrackMetadataError(AppError):
