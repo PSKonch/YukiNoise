@@ -37,6 +37,19 @@ class TrackRepository:
         result = await self._session.execute(stmt)
         return result.scalar_one()
 
+    async def get_track_by_album_and_title(
+        self, album_id: UUID, title: str
+    ) -> Track | None:
+        stmt = select(self.model).where(
+            and_(
+                self.model.album_id == album_id,
+                func.lower(self.model.title) == title.lower(),
+                self.model.deleted_at.is_(None),
+            )
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def trgm_search_by_title(self, search_term: str) -> Sequence[Track]:
         stmt = (
             select(self.model)

@@ -12,6 +12,7 @@ from yn.modules.users.route import router as users_router
 from yn.shared.errors import register_exception_handlers
 from yn.shared.minio import MinioStorage, set_minio_storage
 from yn.shared.settings import settings
+from yn.tasks.broker import broker
 
 
 @asynccontextmanager
@@ -36,10 +37,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await minio_storage.make_bucket(settings.minio_bucket)
         print(f"Bucket '{settings.minio_bucket}' created successfully")
 
+    await broker.startup()
+
     yield
 
     # Shutdown
     print("Shutting down...")
+    await broker.shutdown()
     await minio_storage.close()
     set_minio_storage(None)
 

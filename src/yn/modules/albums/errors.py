@@ -17,3 +17,9 @@ class AlbumAccessDeniedError(AppError):
     status_code = 403
     code = "album_access_denied"
     detail = "You do not have access to this album"
+
+
+class AlbumPictureUploadFailedError(AppError):
+    status_code = 500
+    code = "album_picture_upload_failed"
+    detail = "Album picture upload failed"

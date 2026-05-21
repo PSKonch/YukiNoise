@@ -1,6 +1,7 @@
 from typing import Annotated
+from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, UploadFile
 
 from yn.modules.albums.deps import get_album_service
 from yn.modules.albums.schemas import (
@@ -31,6 +32,24 @@ async def create_album(
         title=payload.title,
         description=payload.description,
         picture_path=payload.picture_path,
+    )
+    return AlbumRead.model_validate(album, from_attributes=True)
+
+
+@router.patch("/{album_id}/picture")
+async def upload_album_picture(
+    current_user: Annotated[UserDTO, Depends(get_current_user)],
+    album_service: Annotated[AlbumService, Depends(get_album_service)],
+    album_id: UUID,
+    picture: Annotated[UploadFile, File(...)],
+) -> AlbumRead:
+    if current_user.profile_id is None:
+        raise ProfileNotFoundError
+
+    album = await album_service.upload_album_picture(
+        album_id=album_id,
+        profile_id=current_user.profile_id,
+        file=picture,
     )
     return AlbumRead.model_validate(album, from_attributes=True)
 

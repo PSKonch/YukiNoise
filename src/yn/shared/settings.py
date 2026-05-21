@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     minio_secure: bool = False
     minio_bucket: str = "tracks"
 
+    upload_temp_dir: str = "/tmp/yukinoise/uploads"
+
     rabbitmq_host: str = "127.0.0.1"
     rabbitmq_port: int = 5672
     rabbitmq_user: str = "guest"

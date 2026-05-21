@@ -1,7 +1,7 @@
 from typing import Sequence
 from uuid import UUID
 
-from sqlalchemy import and_, func, insert, select
+from sqlalchemy import and_, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -40,6 +40,27 @@ class AlbumRepository:
         )
         result = await self._session.execute(stmt)
         return result.scalar_one()
+
+    async def update_picture_path(
+        self,
+        album_id: UUID,
+        profile_id: UUID,
+        picture_path: str | None,
+    ) -> Album | None:
+        stmt = (
+            update(self.model)
+            .where(
+                and_(
+                    self.model.id == album_id,
+                    self.model.profile_id == profile_id,
+                    self.model.deleted_at.is_(None),
+                )
+            )
+            .values(picture_path=picture_path)
+            .returning(self.model)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def trgm_search_by_title(
         self, search_term: str, limit: int, offset: int
