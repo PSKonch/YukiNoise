@@ -1,7 +1,7 @@
 from typing import Any, Sequence
 from uuid import UUID
 
-from sqlalchemy import and_, delete, func, insert, select, update
+from sqlalchemy import and_, delete, func, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -113,9 +113,12 @@ class PostRepository:
         """
         Search posts by title and content using full-text search
         """
-        ts_query = func.websearch_to_tsquery("english", search)
+        ts_query_en = func.websearch_to_tsquery("english", search)
+        ts_query_ru = func.websearch_to_tsquery("russian", search)
 
-        rank = func.ts_rank_cd(self.model.search_vector, ts_query)
+        rank = func.ts_rank_cd(self.model.search_vector, ts_query_en) + func.ts_rank_cd(
+            self.model.search_vector, ts_query_ru
+        )
 
         query = (
             select(self.model)
@@ -126,7 +129,10 @@ class PostRepository:
             )
             .where(
                 and_(
-                    self.model.search_vector.op("@@")(ts_query),
+                    or_(
+                        self.model.search_vector.op("@@")(ts_query_en),
+                        self.model.search_vector.op("@@")(ts_query_ru),
+                    ),
                     self.model.deleted_at.is_(None),
                 )
             )

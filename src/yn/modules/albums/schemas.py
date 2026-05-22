@@ -43,6 +43,13 @@ class AlbumRead(AlbumBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class AlbumPictureUploadAccepted(BaseModel):
+    album_id: UUID
+    status: str = "queued"
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class AlbumWithTracksAndAuthorRead(AlbumRead):
     author_name: str | None = None
     tracks: list[TrackRead] = []

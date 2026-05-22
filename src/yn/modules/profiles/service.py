@@ -41,6 +41,22 @@ class ProfileService:
             limit=limit,
             offset=offset,
         )
+
+        if not profiles:
+            corrected_profiles = (
+                await self.uow.profiles.trgm_search_profiles_by_displayed_name(
+                    query, limit=1, offset=0
+                )
+            )
+            if corrected_profiles:
+                corrected_query = corrected_profiles[0].displayed_name
+                if corrected_query != query:
+                    profiles = await self.uow.profiles.full_text_search_profiles(
+                        corrected_query,
+                        limit=limit,
+                        offset=offset,
+                    )
+
         return [ProfileDTO.from_orm(profile) for profile in profiles]
 
     async def create_profile(

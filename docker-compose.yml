@@ -99,7 +99,7 @@ services:
     volumes:
       - ./src:/opt/app/src
       - track_upload_tmp:/tmp/yukinoise/uploads
-    command: taskiq worker yn.tasks.track_upload:broker
+    command: taskiq worker yn.tasks:broker
 
 volumes:
   postgres_data:
