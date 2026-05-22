@@ -2,8 +2,10 @@ from typing import Sequence
 from uuid import UUID
 
 from sqlalchemy import and_, func, insert, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from yn.modules.tracks.errors import TrackConflictError
 from yn.modules.tracks.model import Track
 
 
@@ -34,7 +36,10 @@ class TrackRepository:
             )
             .returning(self.model)
         )
-        result = await self._session.execute(stmt)
+        try:
+            result = await self._session.execute(stmt)
+        except IntegrityError as exc:
+            raise TrackConflictError from exc
         return result.scalar_one()
 
     async def get_track_by_album_and_title(

@@ -20,6 +20,12 @@ class Album(Base):
         Index("ix_albums_created_at", "created_at", postgresql_using="btree"),
         Index("ix_albums_updated_at", "updated_at", postgresql_using="btree"),
         Index("ix_albums_deleted_at", "deleted_at", postgresql_using="btree"),
+        Index("ix_albums_status", "status", postgresql_using="btree"),
+        Index(
+            "ix_albums_release_date",
+            "release_date",
+            postgresql_using="btree",
+        ),
         Index(
             "ix_albums_title_trgm",
             "title",
@@ -42,6 +48,11 @@ class Album(Base):
     picture_path: Mapped[str | None] = mapped_column(
         nullable=True
     )  # a temporary solution until we have a proper media management system in place
+
+    status: Mapped[str] = mapped_column(
+        nullable=False, default="draft"
+    )  # draft, published, deleted
+    release_date: Mapped[datetime | None] = mapped_column(nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         nullable=False, server_default=func.now()

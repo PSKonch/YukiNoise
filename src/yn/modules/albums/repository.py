@@ -2,9 +2,11 @@ from typing import Sequence
 from uuid import UUID
 
 from sqlalchemy import and_, func, insert, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
+from yn.modules.albums.errors import AlbumConflictError
 from yn.modules.albums.model import Album
 
 
@@ -35,11 +37,27 @@ class AlbumRepository:
                 title=title,
                 description=description,
                 picture_path=picture_path,
+                status="draft",
             )
             .returning(self.model)
         )
-        result = await self._session.execute(stmt)
+        try:
+            result = await self._session.execute(stmt)
+        except IntegrityError as exc:
+            raise AlbumConflictError from exc
         return result.scalar_one()
+
+    async def release_album(
+        self, album_id: UUID
+    ) -> Album | None:  # temporary release method uses only for release date now
+        stmt = (
+            update(self.model)
+            .where(self.model.id == album_id)
+            .values(status="published", release_date=func.now())
+            .returning(self.model)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def update_picture_path(
         self,
@@ -71,6 +89,7 @@ class AlbumRepository:
                 and_(
                     self.model.deleted_at.is_(None),
                     self.model.title.op("%")(search_term),
+                    self.model.status == "published",
                 )
             )
             .order_by(func.similarity(self.model.title, search_term).desc())
@@ -83,7 +102,12 @@ class AlbumRepository:
     async def get_albums(self, limit: int, offset: int) -> Sequence[Album]:
         query = (
             select(self.model)
-            .where(self.model.deleted_at.is_(None))
+            .where(
+                and_(
+                    self.model.deleted_at.is_(None),
+                    self.model.status == "published",
+                )
+            )
             .order_by(self.model.created_at.desc())
             .limit(limit)
             .offset(offset)
@@ -100,7 +124,12 @@ class AlbumRepository:
                 joinedload(self.model.profile),
                 selectinload(self.model.tracks),
             )
-            .where(self.model.deleted_at.is_(None))
+            .where(
+                and_(
+                    self.model.deleted_at.is_(None),
+                    self.model.status == "published",
+                )
+            )
             .order_by(self.model.created_at.desc())
             .limit(limit)
             .offset(offset)

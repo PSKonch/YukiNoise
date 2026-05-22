@@ -2,9 +2,11 @@ from typing import Any, Sequence
 from uuid import UUID
 
 from sqlalchemy import and_, delete, func, insert, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from yn.modules.posts.errors import PostConflictError
 from yn.modules.posts.model import Post
 from yn.modules.profiles.model import Profile
 
@@ -31,7 +33,10 @@ class PostRepository:
                 )
             )
         )
-        result = await self._session.execute(stmt)
+        try:
+            result = await self._session.execute(stmt)
+        except IntegrityError as exc:
+            raise PostConflictError from exc
         return result.scalar_one()
 
     async def update(

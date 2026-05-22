@@ -8,7 +8,6 @@ from pathlib import Path
 from uuid import UUID
 
 from fastapi import UploadFile
-from sqlalchemy.exc import IntegrityError
 
 from yn.modules.albums.service import AlbumService
 from yn.modules.tracks.dto import TrackDTO
@@ -103,7 +102,7 @@ class TrackUploadProcessor:
         self.album_service = album_service
 
     async def process(self, payload: TrackUploadPayload) -> TrackDTO:
-        await self.album_service.get_owned_album_by_id(
+        await self.album_service.get_owned_draft_album_by_id(
             album_id=payload.album_id,
             profile_id=payload.current_profile_id,
         )
@@ -122,9 +121,9 @@ class TrackUploadProcessor:
                 path=payload.storage_key,
                 genres=payload.genres,
             )
-        except IntegrityError as exc:
+        except TrackConflictError:
             await self._safe_delete_from_storage(payload.storage_key)
-            raise TrackConflictError from exc
+            raise
         except Exception as exc:
             await self._safe_delete_from_storage(payload.storage_key)
             if isinstance(exc, TrackMetadataError):

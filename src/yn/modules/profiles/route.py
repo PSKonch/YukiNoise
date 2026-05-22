@@ -22,6 +22,8 @@ async def read_current_user_profile(
     profile_service: Annotated[ProfileService, Depends(get_profile_service)],
 ) -> ProfileRead:
     profile = await profile_service.get_profile_by_user_id(current_user.id)
+    if profile is None:
+        raise ProfileNotFoundError
     return ProfileRead.model_validate(profile, from_attributes=True)
 
 

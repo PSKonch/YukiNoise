@@ -23,3 +23,9 @@ class AlbumPictureUploadFailedError(AppError):
     status_code = 500
     code = "album_picture_upload_failed"
     detail = "Album picture upload failed"
+
+
+class AlbumNotDraftError(AppError):
+    status_code = 409
+    code = "album_not_draft"
+    detail = "Album must be in draft status to upload tracks"

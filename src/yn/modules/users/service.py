@@ -1,7 +1,5 @@
 from uuid import UUID
 
-from sqlalchemy.exc import IntegrityError
-
 from yn.modules.users.dto import UserDTO
 from yn.modules.users.errors import EmailAlreadyTakenError, InvalidLoginCredentialsError
 from yn.modules.users.security import hash_password, verify_password
@@ -52,10 +50,7 @@ class UserService:
         await self.uow.users.hard_delete_user(user_id)
 
     async def update_user_email(self, user_id: UUID, new_email: str) -> None:
-        try:
-            await self.uow.users.update_email(user_id, new_email)
-        except IntegrityError as exc:
-            raise EmailAlreadyTakenError from exc
+        await self.uow.users.update_email(user_id, new_email)
 
     async def update_user_password(self, user_id: UUID, new_password: str) -> None:
         new_hashed_password = hash_password(new_password)

@@ -30,7 +30,7 @@ class TrackService:
         genres: list[str],
         file: UploadFile,
     ) -> TrackUploadQueuedDTO:
-        await self.album_service.get_owned_album_by_id(
+        await self.album_service.get_owned_draft_album_by_id(
             album_id=album_id,
             profile_id=current_profile_id,
         )

@@ -18,7 +18,7 @@ class UserDTO:
 
     @classmethod
     def from_orm(cls, user: User) -> "UserDTO":
-        profile = getattr(user, "profile", None)
+        profile = user.__dict__.get("profile")
         return cls(
             id=user.id,
             email=user.email,

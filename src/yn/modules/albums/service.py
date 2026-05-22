@@ -2,12 +2,11 @@ from pathlib import Path
 from uuid import UUID
 
 from fastapi import UploadFile
-from sqlalchemy.exc import IntegrityError
 
 from yn.modules.albums.dto import AlbumDTO, AlbumWithTracksAndAuthorDTO
 from yn.modules.albums.errors import (
     AlbumAccessDeniedError,
-    AlbumConflictError,
+    AlbumNotDraftError,
     AlbumNotFoundError,
     AlbumPictureUploadFailedError,
 )
@@ -28,15 +27,12 @@ class AlbumService:
         description: str | None = None,
         picture_path: str | None = None,
     ) -> AlbumDTO:
-        try:
-            album = await self.uow.albums.create(
-                profile_id=profile_id,
-                title=title,
-                description=description,
-                picture_path=picture_path,
-            )
-        except IntegrityError as exc:
-            raise AlbumConflictError from exc
+        album = await self.uow.albums.create(
+            profile_id=profile_id,
+            title=title,
+            description=description,
+            picture_path=picture_path,
+        )
         return AlbumDTO.from_orm(album)
 
     async def get_albums(self, *, limit: int, offset: int) -> list[AlbumDTO]:
@@ -69,6 +65,20 @@ class AlbumService:
             raise AlbumNotFoundError
         if album.profile_id != profile_id:
             raise AlbumAccessDeniedError
+        return AlbumDTO.from_orm(album)
+
+    async def get_owned_draft_album_by_id(
+        self,
+        album_id: UUID,
+        profile_id: UUID,
+    ) -> AlbumDTO:
+        album = await self.uow.albums.get_album_by_id(album_id)
+        if album is None:
+            raise AlbumNotFoundError
+        if album.profile_id != profile_id:
+            raise AlbumAccessDeniedError
+        if album.status != "draft":
+            raise AlbumNotDraftError
         return AlbumDTO.from_orm(album)
 
     async def get_albums_with_tracks_and_author_profile(
