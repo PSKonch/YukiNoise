@@ -104,15 +104,21 @@ class ProfileRepository:
         """
         Search profiles by displayed name and bio using full-text search
         """
-        ts_query = func.websearch_to_tsquery("english", search)
+        ts_query_en = func.websearch_to_tsquery("english", search)
+        ts_query_ru = func.websearch_to_tsquery("russian", search)
 
-        rank = func.ts_rank_cd(self.model.search_vector, ts_query)
+        rank = func.ts_rank_cd(self.model.search_vector, ts_query_en) + func.ts_rank_cd(
+            self.model.search_vector, ts_query_ru
+        )
 
         query = (
             select(self.model)
             .where(
                 and_(
-                    self.model.search_vector.op("@@")(ts_query),
+                    or_(
+                        self.model.search_vector.op("@@")(ts_query_en),
+                        self.model.search_vector.op("@@")(ts_query_ru),
+                    ),
                     self.model.deleted_at.is_(None),
                 )
             )
@@ -123,21 +129,18 @@ class ProfileRepository:
         result = await self._session.execute(query)
         return result.scalars().all()
 
-    async def ilike_search_profiles(
-        self, search: str, limit: int, offset: int
+    async def trgm_search_profiles_by_displayed_name(
+        self, search_term: str, limit: int, offset: int
     ) -> Sequence[Profile]:
-        """
-        Search profiles by displayed name and bio using ILIKE
-        """
-        pattern = f"%{search}%"
-        query = select(self.model).where(
-            and_(
-                or_(
-                    self.model.displayed_name.ilike(pattern),
-                    self.model.bio.ilike(pattern),
-                ),
-                self.model.deleted_at.is_(None),
+        query = (
+            select(self.model)
+            .where(
+                and_(
+                    self.model.deleted_at.is_(None),
+                    self.model.displayed_name.op("%")(search_term),
+                )
             )
+            .order_by(func.similarity(self.model.displayed_name, search_term).desc())
             .limit(limit)
             .offset(offset)
         )

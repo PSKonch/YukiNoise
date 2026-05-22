@@ -22,6 +22,12 @@ class Profile(Base):
         Index("ix_profiles_search_vector", "search_vector", postgresql_using="gin"),
         Index("ix_profiles_created_at", "created_at", postgresql_using="btree"),
         Index("ix_profiles_deleted_at", "deleted_at", postgresql_using="btree"),
+        Index(
+            "ix_profiles_displayed_name_trgm",
+            "displayed_name",
+            postgresql_using="gin",
+            postgresql_ops={"displayed_name": "gin_trgm_ops"},
+        ),
     )
 
     id: Mapped[PyUUID] = mapped_column(
@@ -41,7 +47,9 @@ class Profile(Base):
         Computed(
             """
             setweight(to_tsvector('english', coalesce(displayed_name, '')), 'A') ||
-            setweight(to_tsvector('english', coalesce(bio, '')), 'B')
+            setweight(to_tsvector('english', coalesce(bio, '')), 'B') ||
+            setweight(to_tsvector('russian', coalesce(displayed_name, '')), 'A') ||
+            setweight(to_tsvector('russian', coalesce(bio, '')), 'B')
             """,
             persisted=True,
         ),

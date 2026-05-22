@@ -37,7 +37,9 @@ class Post(Base):
         Computed(
             """
             setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
-            setweight(to_tsvector('english', coalesce(content, '')), 'B')
+            setweight(to_tsvector('english', coalesce(content, '')), 'B') ||
+            setweight(to_tsvector('russian', coalesce(title, '')), 'A') ||
+            setweight(to_tsvector('russian', coalesce(content, '')), 'B')
             """,
             persisted=True,
         ),
