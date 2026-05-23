@@ -29,3 +29,9 @@ class AlbumNotDraftError(AppError):
     status_code = 409
     code = "album_not_draft"
     detail = "Album must be in draft status to upload tracks"
+
+
+class AlbumNotScheduledError(AppError):
+    status_code = 409
+    code = "album_not_scheduled"
+    detail = "Album must be in scheduled status to cancel the release"

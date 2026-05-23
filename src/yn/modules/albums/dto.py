@@ -16,6 +16,8 @@ class AlbumDTO:
     title: str
     description: str | None
     picture_path: str | None
+    status: str
+    release_date: datetime | None
     created_at: datetime | None
     updated_at: datetime | None
     deleted_at: datetime | None
@@ -28,6 +30,8 @@ class AlbumDTO:
             title=album.title,
             description=getattr(album, "description", None),
             picture_path=getattr(album, "picture_path", None),
+            status=getattr(album, "status", "draft"),
+            release_date=getattr(album, "release_date", None),
             created_at=getattr(album, "created_at", None),
             updated_at=getattr(album, "updated_at", None),
             deleted_at=getattr(album, "deleted_at", None),
@@ -41,6 +45,8 @@ class AlbumWithTracksAndAuthorDTO:
     title: str
     description: str | None
     picture_path: str | None
+    status: str
+    release_date: datetime | None
     author_name: str | None
     tracks: list[TrackDTO]
     created_at: datetime | None
@@ -60,6 +66,8 @@ class AlbumWithTracksAndAuthorDTO:
             title=album.title,
             description=getattr(album, "description", None),
             picture_path=getattr(album, "picture_path", None),
+            status=getattr(album, "status", "draft"),
+            release_date=getattr(album, "release_date", None),
             author_name=getattr(profile, "displayed_name", None),
             tracks=tracks,
             created_at=getattr(album, "created_at", None),

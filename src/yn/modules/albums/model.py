@@ -51,7 +51,7 @@ class Album(Base):
 
     status: Mapped[str] = mapped_column(
         nullable=False, default="draft"
-    )  # draft, published, deleted
+    )  # draft, scheduled, published, deleted
     release_date: Mapped[datetime | None] = mapped_column(nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(

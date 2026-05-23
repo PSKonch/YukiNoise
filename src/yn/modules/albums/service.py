@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
 
@@ -8,6 +9,7 @@ from yn.modules.albums.errors import (
     AlbumAccessDeniedError,
     AlbumNotDraftError,
     AlbumNotFoundError,
+    AlbumNotScheduledError,
     AlbumPictureUploadFailedError,
 )
 from yn.shared.minio import MinioStorage
@@ -81,6 +83,58 @@ class AlbumService:
             raise AlbumNotDraftError
         return AlbumDTO.from_orm(album)
 
+    async def get_owned_scheduled_album_by_id(
+        self,
+        album_id: UUID,
+        profile_id: UUID,
+    ) -> AlbumDTO:
+        album = await self.uow.albums.get_album_by_id(album_id)
+        if album is None:
+            raise AlbumNotFoundError
+        if album.profile_id != profile_id:
+            raise AlbumAccessDeniedError
+        if album.status != "scheduled":
+            raise AlbumNotScheduledError
+        return AlbumDTO.from_orm(album)
+
+    async def schedule_album_release(
+        self,
+        *,
+        album_id: UUID,
+        profile_id: UUID,
+        release_date: datetime,
+    ) -> AlbumDTO:
+        await self.get_owned_draft_album_by_id(
+            album_id=album_id,
+            profile_id=profile_id,
+        )
+
+        normalized_release_date = self._normalize_release_date(release_date)
+
+        updated_album = await self.uow.albums.schedule_release_album(
+            album_id=album_id,
+            release_date=normalized_release_date,
+        )
+        if updated_album is None:
+            raise AlbumNotFoundError
+        return AlbumDTO.from_orm(updated_album)
+
+    async def unschedule_album_release(
+        self,
+        *,
+        album_id: UUID,
+        profile_id: UUID,
+    ) -> AlbumDTO:
+        await self.get_owned_scheduled_album_by_id(
+            album_id=album_id,
+            profile_id=profile_id,
+        )
+
+        updated_album = await self.uow.albums.unschedule_release_album(album_id)
+        if updated_album is None:
+            raise AlbumNotFoundError
+        return AlbumDTO.from_orm(updated_album)
+
     async def get_albums_with_tracks_and_author_profile(
         self, *, limit: int, offset: int
     ) -> list[AlbumWithTracksAndAuthorDTO]:
@@ -136,3 +190,8 @@ class AlbumService:
             await self.storage.delete(settings.minio_bucket, picture_path)
         except Exception:
             pass
+
+    def _normalize_release_date(self, release_date: datetime) -> datetime:
+        if release_date.tzinfo is None:
+            return release_date
+        return release_date.astimezone(UTC).replace(tzinfo=None)

@@ -14,6 +14,7 @@ from yn.modules.albums.schemas import (
     AlbumCreate,
     AlbumPictureUploadAccepted,
     AlbumRead,
+    AlbumReleaseSchedule,
     AlbumWithTracksAndAuthorRead,
 )
 from yn.modules.albums.service import AlbumService
@@ -125,3 +126,37 @@ async def get_albums_with_tracks_and_author_profile(
         AlbumWithTracksAndAuthorRead.model_validate(album, from_attributes=True)
         for album in albums
     ]
+
+
+@router.patch("/{album_id}/release")
+async def schedule_album_release(
+    current_user: Annotated[UserDTO, Depends(get_current_user)],
+    album_service: Annotated[AlbumService, Depends(get_album_service)],
+    album_id: UUID,
+    payload: AlbumReleaseSchedule,
+) -> AlbumRead:
+    if current_user.profile_id is None:
+        raise ProfileNotFoundError
+
+    album = await album_service.schedule_album_release(
+        album_id=album_id,
+        profile_id=current_user.profile_id,
+        release_date=payload.release_date,
+    )
+    return AlbumRead.model_validate(album, from_attributes=True)
+
+
+@router.delete("/{album_id}/release")
+async def cancel_album_release(
+    current_user: Annotated[UserDTO, Depends(get_current_user)],
+    album_service: Annotated[AlbumService, Depends(get_album_service)],
+    album_id: UUID,
+) -> AlbumRead:
+    if current_user.profile_id is None:
+        raise ProfileNotFoundError
+
+    album = await album_service.unschedule_album_release(
+        album_id=album_id,
+        profile_id=current_user.profile_id,
+    )
+    return AlbumRead.model_validate(album, from_attributes=True)
