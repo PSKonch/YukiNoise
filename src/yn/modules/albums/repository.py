@@ -24,6 +24,21 @@ class AlbumRepository:
         result = await self._session.execute(query)
         return result.scalar_one_or_none()
 
+    async def get_owned_album_by_id(
+        self,
+        album_id: UUID,
+        profile_id: UUID,
+    ) -> Album | None:
+        query = select(self.model).where(
+            and_(
+                self.model.id == album_id,
+                self.model.profile_id == profile_id,
+                self.model.deleted_at.is_(None),
+            )
+        )
+        result = await self._session.execute(query)
+        return result.scalar_one_or_none()
+
     async def create(
         self,
         profile_id: UUID,
@@ -47,6 +62,28 @@ class AlbumRepository:
         except IntegrityError as exc:
             raise AlbumConflictError from exc
         return result.scalar_one()
+
+    async def update_description(
+        self,
+        album_id: UUID,
+        profile_id: UUID,
+        description: str | None,
+    ) -> Album | None:
+        stmt = (
+            update(self.model)
+            .where(
+                and_(
+                    self.model.id == album_id,
+                    self.model.profile_id == profile_id,
+                    self.model.deleted_at.is_(None),
+                    self.model.status != "published",
+                )
+            )
+            .values(description=description)
+            .returning(self.model)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def release_album(self, album_id: UUID) -> Album | None:
         stmt = (
@@ -183,6 +220,27 @@ class AlbumRepository:
         result = await self._session.execute(query)
         return result.scalars().all()
 
+    async def get_owned_albums(
+        self,
+        profile_id: UUID,
+        limit: int,
+        offset: int,
+    ) -> Sequence[Album]:
+        query = (
+            select(self.model)
+            .where(
+                and_(
+                    self.model.deleted_at.is_(None),
+                    self.model.profile_id == profile_id,
+                )
+            )
+            .order_by(self.model.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(query)
+        return result.scalars().all()
+
     async def get_albums_with_tracks_and_author_profile(
         self, limit: int, offset: int
     ) -> Sequence[Album]:
@@ -211,3 +269,23 @@ class AlbumRepository:
         )
         result = await self._session.execute(query)
         return result.scalars().unique().all()
+
+    async def get_album_with_tracks_and_author_profile_by_id(
+        self, album_id: UUID
+    ) -> Album | None:
+        query = (
+            select(self.model)
+            .options(
+                joinedload(self.model.profile),
+                selectinload(self.model.tracks),
+            )
+            .where(
+                and_(
+                    self.model.id == album_id,
+                    self.model.deleted_at.is_(None),
+                    self.model.status == "published",
+                )
+            )
+        )
+        result = await self._session.execute(query)
+        return result.scalars().first()

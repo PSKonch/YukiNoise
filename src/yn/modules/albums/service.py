@@ -37,8 +37,41 @@ class AlbumService:
         )
         return AlbumDTO.from_orm(album)
 
+    async def update_description_of_album(
+        self,
+        profile_id: UUID,
+        album_id: UUID,
+        description: str,
+    ) -> AlbumDTO:
+        album = await self.uow.albums.update_description(
+            album_id=album_id,
+            profile_id=profile_id,
+            description=description,
+        )
+        if album is None:
+            raise AlbumNotFoundError
+        if album.profile_id != profile_id:
+            raise AlbumAccessDeniedError
+        if album.status != "draft":
+            raise AlbumNotDraftError
+        return AlbumDTO.from_orm(album)
+
     async def get_albums(self, *, limit: int, offset: int) -> list[AlbumDTO]:
         albums = await self.uow.albums.get_albums(limit=limit, offset=offset)
+        return [AlbumDTO.from_orm(album) for album in albums]
+
+    async def get_owned_albums(
+        self,
+        profile_id: UUID,
+        *,
+        limit: int,
+        offset: int,
+    ) -> list[AlbumDTO]:
+        albums = await self.uow.albums.get_owned_albums(
+            profile_id=profile_id,
+            limit=limit,
+            offset=offset,
+        )
         return [AlbumDTO.from_orm(album) for album in albums]
 
     async def trgm_search_by_title(
@@ -62,7 +95,10 @@ class AlbumService:
         album_id: UUID,
         profile_id: UUID,
     ) -> AlbumDTO:
-        album = await self.uow.albums.get_album_by_id(album_id)
+        album = await self.uow.albums.get_owned_album_by_id(
+            album_id=album_id,
+            profile_id=profile_id,
+        )
         if album is None:
             raise AlbumNotFoundError
         if album.profile_id != profile_id:
@@ -143,6 +179,16 @@ class AlbumService:
             offset=offset,
         )
         return [AlbumWithTracksAndAuthorDTO.from_orm(album) for album in albums]
+
+    async def get_album_with_tracks_and_author_profile_by_id(
+        self, album_id: UUID
+    ) -> AlbumWithTracksAndAuthorDTO:
+        album = await self.uow.albums.get_album_with_tracks_and_author_profile_by_id(
+            album_id=album_id
+        )
+        if album is None:
+            raise AlbumNotFoundError
+        return AlbumWithTracksAndAuthorDTO.from_orm(album)
 
     async def upload_album_picture(
         self,
