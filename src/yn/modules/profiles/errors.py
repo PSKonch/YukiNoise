@@ -7,6 +7,18 @@ class ProfileConflictError(AppError):
     detail = "Profile data conflicts with existing records"
 
 
+class ProfileAlreadyExistsError(AppError):
+    status_code = 409
+    code = "profile_already_exists"
+    detail = "Profile already exists for this user"
+
+
+class ProfileDisplayedNameTakenError(AppError):
+    status_code = 409
+    code = "profile_displayed_name_taken"
+    detail = "Displayed name is already taken"
+
+
 class ProfileNotFoundError(AppError):
     status_code = 404
     code = "profile_not_found"

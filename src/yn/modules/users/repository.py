@@ -3,9 +3,11 @@ from uuid import UUID
 
 from sqlalchemy import and_, delete, exists, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from yn.modules.users.errors import EmailAlreadyTakenError
 from yn.modules.users.model import User
 
 
@@ -37,7 +39,10 @@ class UserRepository:
         stmt = (
             update(self.model).where(self.model.id == user_id).values(email=new_email)
         )
-        await self._session.execute(stmt)
+        try:
+            await self._session.execute(stmt)
+        except IntegrityError as exc:
+            raise EmailAlreadyTakenError from exc
 
     async def update_role(self, user_id: UUID, new_role: str) -> None:
         stmt = update(self.model).where(self.model.id == user_id).values(role=new_role)

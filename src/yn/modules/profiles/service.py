@@ -1,9 +1,10 @@
 from uuid import UUID
 
-from sqlalchemy.exc import IntegrityError
-
 from yn.modules.profiles.dto import ProfileDTO
-from yn.modules.profiles.errors import ProfileConflictError
+from yn.modules.profiles.errors import (
+    ProfileAlreadyExistsError,
+    ProfileDisplayedNameTakenError,
+)
 from yn.shared.unit_of_work import UnitOfWork
 
 
@@ -66,15 +67,22 @@ class ProfileService:
         bio: str | None = None,
         social_links: dict[str, str] | None = None,
     ) -> ProfileDTO:
-        try:
-            profile = await self.uow.profiles.create(
-                user_id=user_id,
-                displayed_name=displayed_name,
-                bio=bio,
-                social_links=social_links,
-            )
-        except IntegrityError as exc:
-            raise ProfileConflictError from exc
+        existing_profile = await self.uow.profiles.get_profile_by_user_id(user_id)
+        if existing_profile is not None:
+            raise ProfileAlreadyExistsError
+
+        existing_name = await self.uow.profiles.get_profile_by_displayed_name(
+            displayed_name
+        )
+        if existing_name is not None:
+            raise ProfileDisplayedNameTakenError
+
+        profile = await self.uow.profiles.create(
+            user_id=user_id,
+            displayed_name=displayed_name,
+            bio=bio,
+            social_links=social_links,
+        )
         return ProfileDTO.from_orm(profile)
 
     async def update_profile(
@@ -84,15 +92,12 @@ class ProfileService:
         bio: str | None = None,
         social_links: dict[str, str] | None = None,
     ) -> bool:
-        try:
-            return await self.uow.profiles.update(
-                user_id=user_id,
-                displayed_name=displayed_name,
-                bio=bio,
-                social_links=social_links,
-            )
-        except IntegrityError as exc:
-            raise ProfileConflictError from exc
+        return await self.uow.profiles.update(
+            user_id=user_id,
+            displayed_name=displayed_name,
+            bio=bio,
+            social_links=social_links,
+        )
 
     async def hard_delete_profile(self, user_id: UUID) -> bool:
         return await self.uow.profiles.hard_delete_profile(user_id)

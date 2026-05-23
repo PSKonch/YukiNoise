@@ -101,6 +101,35 @@ services:
       - track_upload_tmp:/tmp/yukinoise/uploads
     command: taskiq worker yn.tasks:broker
 
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+      minio:
+        condition: service_started
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: yukinoise
+      POSTGRES_HOST: db
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_SECURE: "false"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      UPLOAD_TEMP_DIR: /tmp/yukinoise/uploads
+    volumes:
+      - ./src:/opt/app/src
+      - track_upload_tmp:/tmp/yukinoise/uploads
+    command: taskiq scheduler yn.tasks.scheduler:scheduler yn.tasks
+
 volumes:
   postgres_data:
   minio_data:

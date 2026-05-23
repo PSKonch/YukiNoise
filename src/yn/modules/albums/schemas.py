@@ -36,6 +36,8 @@ class AlbumUpdate(BaseModel):
 class AlbumRead(AlbumBase):
     id: UUID
     profile_id: UUID
+    status: str
+    release_date: datetime | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
     deleted_at: datetime | None = None
@@ -53,3 +55,7 @@ class AlbumPictureUploadAccepted(BaseModel):
 class AlbumWithTracksAndAuthorRead(AlbumRead):
     author_name: str | None = None
     tracks: list[TrackRead] = []
+
+
+class AlbumReleaseSchedule(BaseModel):
+    release_date: datetime

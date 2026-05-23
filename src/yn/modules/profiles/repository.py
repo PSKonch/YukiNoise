@@ -2,9 +2,11 @@ from typing import Any, Sequence
 from uuid import UUID
 
 from sqlalchemy import and_, delete, func, insert, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from yn.modules.profiles.errors import ProfileConflictError
 from yn.modules.profiles.model import Profile
 
 
@@ -31,7 +33,10 @@ class ProfileRepository:
             )
             .returning(self.model)
         )
-        result = await self._session.execute(stmt)
+        try:
+            result = await self._session.execute(stmt)
+        except IntegrityError as exc:
+            raise ProfileConflictError from exc
         return result.scalar_one()
 
     async def update(
@@ -58,7 +63,10 @@ class ProfileRepository:
             .values(**values)
             .returning(self.model.id)
         )
-        result = await self._session.execute(stmt)
+        try:
+            result = await self._session.execute(stmt)
+        except IntegrityError as exc:
+            raise ProfileConflictError from exc
         return result.scalar_one_or_none() is not None
 
     async def get_profiles(self, limit: int, offset: int) -> Sequence[Profile]:

@@ -1,11 +1,8 @@
 from uuid import UUID
 
-from sqlalchemy.exc import IntegrityError
-
 from yn.modules.posts.dto import PostDTO
 from yn.modules.posts.errors import (
     EmptyPostUpdateError,
-    PostConflictError,
     PostNotFoundError,
 )
 from yn.shared.unit_of_work import UnitOfWork
@@ -21,12 +18,9 @@ class PostService:
         title: str,
         content: str,
     ) -> PostDTO:
-        try:
-            post = await self.uow.posts.create(
-                profile_id=profile_id, title=title, content=content
-            )
-        except IntegrityError as exc:
-            raise PostConflictError from exc
+        post = await self.uow.posts.create(
+            profile_id=profile_id, title=title, content=content
+        )
         return PostDTO.from_orm(post)
 
     async def update_post(
