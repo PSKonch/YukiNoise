@@ -35,6 +35,9 @@ class Track(Base):
     )
     deleted_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
+    # Relationships
+    album: Mapped["Album"] = relationship("Album", back_populates="tracks")
+
     __table_args__ = (
         Index("ix_tracks_created_at", "created_at", postgresql_using="btree"),
         Index("ix_tracks_deleted_at", "deleted_at", postgresql_using="btree"),
@@ -52,6 +55,3 @@ class Track(Base):
             postgresql_where=deleted_at.is_(None),
         ),
     )
-
-    # Relationships
-    album: Mapped["Album"] = relationship("Album", back_populates="tracks")

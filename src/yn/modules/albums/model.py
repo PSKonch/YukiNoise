@@ -4,8 +4,9 @@ from uuid import UUID as PyUUID
 from uuid import uuid4
 
 from sqlalchemy import UUID as SA_UUID
-from sqlalchemy import ForeignKey, Index, func
+from sqlalchemy import ForeignKey, Index, and_, func, or_
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.sql.elements import ColumnElement
 
 from yn.shared.database import Base
 
@@ -20,6 +21,7 @@ class Album(Base):
         Index("ix_albums_created_at", "created_at", postgresql_using="btree"),
         Index("ix_albums_updated_at", "updated_at", postgresql_using="btree"),
         Index("ix_albums_deleted_at", "deleted_at", postgresql_using="btree"),
+        Index("ix_albums_profile_id", "profile_id", postgresql_using="btree"),
         Index("ix_albums_status", "status", postgresql_using="btree"),
         Index(
             "ix_albums_release_date",
@@ -65,3 +67,14 @@ class Album(Base):
     # Relationships
     profile: Mapped["Profile"] = relationship("Profile", back_populates="albums")
     tracks: Mapped[list["Track"]] = relationship("Track", back_populates="album")
+
+    @classmethod
+    def public_visibility_clause(cls) -> ColumnElement[bool]:
+        return or_(
+            cls.status == "published",
+            and_(cls.status == "scheduled", cls.release_date <= func.now()),
+        )
+
+    @classmethod
+    def publicly_visible_clause(cls) -> ColumnElement[bool]:
+        return and_(cls.deleted_at.is_(None), cls.public_visibility_clause())

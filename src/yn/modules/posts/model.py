@@ -20,6 +20,7 @@ class Post(Base):
         Index("ix_posts_search_vector", "search_vector", postgresql_using="gin"),
         Index("ix_posts_updated_at", "updated_at", postgresql_using="btree"),
         Index("ix_posts_created_at", "created_at", postgresql_using="btree"),
+        Index("ix_posts_profile_id", "profile_id", postgresql_using="btree"),
     )
 
     id: Mapped[PyUUID] = mapped_column(

@@ -23,3 +23,9 @@ class TrackMetadataError(AppError):
     status_code = 400
     code = "track_metadata_error"
     detail = "Could not read audio metadata"
+
+
+class TrackNotFoundError(AppError):
+    status_code = 404
+    code = "track_not_found"
+    detail = "Track not found"

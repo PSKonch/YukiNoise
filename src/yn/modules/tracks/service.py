@@ -4,8 +4,12 @@ from uuid import UUID, uuid4
 from fastapi import UploadFile
 
 from yn.modules.albums.service import AlbumService
-from yn.modules.tracks.dto import TrackUploadQueuedDTO
-from yn.modules.tracks.errors import TrackConflictError, TrackUploadFailedError
+from yn.modules.tracks.dto import TrackDTO, TrackUploadQueuedDTO
+from yn.modules.tracks.errors import (
+    TrackConflictError,
+    TrackNotFoundError,
+    TrackUploadFailedError,
+)
 from yn.modules.tracks.uploader import (
     TrackUploadPayload,
     build_track_storage_key,
@@ -63,6 +67,16 @@ class TrackService:
             raise TrackUploadFailedError from exc
 
         return TrackUploadQueuedDTO(track_id=track_id, album_id=album_id, title=title)
+
+    async def get_track_by_id(self, track_id: UUID) -> TrackDTO:
+        track = await self.uow.tracks.get_track_by_id(track_id)
+        if track is None:
+            raise TrackNotFoundError
+        return TrackDTO.from_orm(track)
+
+    async def get_tracks(self, *, limit: int, offset: int) -> list[TrackDTO]:
+        tracks = await self.uow.tracks.get_tracks(limit=limit, offset=offset)
+        return [TrackDTO.from_orm(track) for track in tracks]
 
     async def _ensure_track_title_is_available(
         self, *, album_id: UUID, title: str

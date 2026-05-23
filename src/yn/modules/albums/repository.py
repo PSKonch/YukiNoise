@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Sequence
 from uuid import UUID
 
-from sqlalchemy import and_, func, insert, or_, select, update
+from sqlalchemy import and_, func, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
@@ -174,20 +174,12 @@ class AlbumRepository:
     async def trgm_search_by_title(
         self, search_term: str, limit: int, offset: int
     ) -> Sequence[Album]:
-        public_visibility = or_(
-            self.model.status == "published",
-            and_(
-                self.model.status == "scheduled",
-                self.model.release_date <= func.now(),
-            ),
-        )
         query = (
             select(self.model)
             .where(
                 and_(
-                    self.model.deleted_at.is_(None),
+                    self.model.publicly_visible_clause(),
                     self.model.title.op("%")(search_term),
-                    public_visibility,
                 )
             )
             .order_by(func.similarity(self.model.title, search_term).desc())
@@ -198,21 +190,9 @@ class AlbumRepository:
         return result.scalars().all()
 
     async def get_albums(self, limit: int, offset: int) -> Sequence[Album]:
-        public_visibility = or_(
-            self.model.status == "published",
-            and_(
-                self.model.status == "scheduled",
-                self.model.release_date <= func.now(),
-            ),
-        )
         query = (
             select(self.model)
-            .where(
-                and_(
-                    self.model.deleted_at.is_(None),
-                    public_visibility,
-                )
-            )
+            .where(self.model.publicly_visible_clause())
             .order_by(self.model.created_at.desc())
             .limit(limit)
             .offset(offset)
@@ -244,25 +224,13 @@ class AlbumRepository:
     async def get_albums_with_tracks_and_author_profile(
         self, limit: int, offset: int
     ) -> Sequence[Album]:
-        public_visibility = or_(
-            self.model.status == "published",
-            and_(
-                self.model.status == "scheduled",
-                self.model.release_date <= func.now(),
-            ),
-        )
         query = (
             select(self.model)
             .options(
                 joinedload(self.model.profile),
                 selectinload(self.model.tracks),
             )
-            .where(
-                and_(
-                    self.model.deleted_at.is_(None),
-                    public_visibility,
-                )
-            )
+            .where(self.model.publicly_visible_clause())
             .order_by(self.model.created_at.desc())
             .limit(limit)
             .offset(offset)
@@ -282,8 +250,7 @@ class AlbumRepository:
             .where(
                 and_(
                     self.model.id == album_id,
-                    self.model.deleted_at.is_(None),
-                    self.model.status == "published",
+                    self.model.publicly_visible_clause(),
                 )
             )
         )
