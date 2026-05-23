@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 from fastapi import UploadFile
 
-from yn.modules.albums.service import AlbumService
+from yn.modules.releases.service import ReleaseService
 from yn.modules.tracks.dto import TrackDTO, TrackUploadQueuedDTO
 from yn.modules.tracks.errors import (
     TrackConflictError,
@@ -21,30 +21,30 @@ from yn.tasks.track_upload import process_track_upload
 
 
 class TrackService:
-    def __init__(self, uow: UnitOfWork, album_service: AlbumService):
+    def __init__(self, uow: UnitOfWork, release_service: ReleaseService):
         self.uow = uow
-        self.album_service = album_service
+        self.release_service = release_service
 
     async def upload_track(
         self,
         *,
-        album_id: UUID,
+        release_id: UUID,
         current_profile_id: UUID,
         title: str,
         genres: list[str],
         file: UploadFile,
     ) -> TrackUploadQueuedDTO:
-        await self.album_service.get_owned_draft_album_by_id(
-            album_id=album_id,
+        await self.release_service.get_owned_draft_release_by_id(
+            release_id=release_id,
             profile_id=current_profile_id,
         )
 
         validate_track_filename(file.filename)
-        await self._ensure_track_title_is_available(album_id=album_id, title=title)
+        await self._ensure_track_title_is_available(release_id=release_id, title=title)
 
         track_id = uuid4()
         storage_key = build_track_storage_key(
-            album_id=album_id,
+            release_id=release_id,
             track_id=track_id,
             filename=file.filename,
         )
@@ -54,7 +54,7 @@ class TrackService:
             await process_track_upload.kiq(
                 payload=TrackUploadPayload(
                     track_id=track_id,
-                    album_id=album_id,
+                    release_id=release_id,
                     current_profile_id=current_profile_id,
                     title=title,
                     genres=genres,
@@ -66,7 +66,9 @@ class TrackService:
             await self._cleanup_tempfile(temp_path)
             raise TrackUploadFailedError from exc
 
-        return TrackUploadQueuedDTO(track_id=track_id, album_id=album_id, title=title)
+        return TrackUploadQueuedDTO(
+            track_id=track_id, release_id=release_id, title=title
+        )
 
     async def get_track_by_id(self, track_id: UUID) -> TrackDTO:
         track = await self.uow.tracks.get_track_by_id(track_id)
@@ -79,9 +81,9 @@ class TrackService:
         return [TrackDTO.from_orm(track) for track in tracks]
 
     async def _ensure_track_title_is_available(
-        self, *, album_id: UUID, title: str
+        self, *, release_id: UUID, title: str
     ) -> None:
-        track = await self.uow.tracks.get_track_by_album_and_title(album_id, title)
+        track = await self.uow.tracks.get_track_by_release_and_title(release_id, title)
         if track is not None:
             raise TrackConflictError
 

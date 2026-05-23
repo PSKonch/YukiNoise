@@ -10,7 +10,7 @@ class TrackUploadFailedError(AppError):
 class TrackConflictError(AppError):
     status_code = 409
     code = "track_conflict"
-    detail = "A track with this title already exists in the album"
+    detail = "A track with this title already exists in the release"
 
 
 class TrackFormatError(AppError):

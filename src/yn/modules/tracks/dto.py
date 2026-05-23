@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 @dataclass
 class TrackDTO:
     id: UUID
-    album_id: UUID
+    release_id: UUID
     title: str
     duration_seconds: int
     path: str
@@ -22,7 +22,7 @@ class TrackDTO:
     def from_orm(cls, track: "Track") -> "TrackDTO":
         return cls(
             id=track.id,
-            album_id=track.album_id,
+            release_id=track.release_id,
             title=track.title,
             duration_seconds=track.duration_seconds,
             path=track.path,
@@ -35,6 +35,6 @@ class TrackDTO:
 @dataclass
 class TrackUploadQueuedDTO:
     track_id: UUID
-    album_id: UUID
+    release_id: UUID
     title: str
     status: str = "queued"

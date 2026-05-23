@@ -9,7 +9,7 @@ from uuid import UUID
 
 from fastapi import UploadFile
 
-from yn.modules.albums.service import AlbumService
+from yn.modules.releases.service import ReleaseService
 from yn.modules.tracks.dto import TrackDTO
 from yn.modules.tracks.errors import (
     TrackConflictError,
@@ -27,7 +27,7 @@ ALLOWED_TRACK_SUFFIXES = {".mp3", ".wav"}
 @dataclass(slots=True)
 class TrackUploadPayload:
     track_id: UUID
-    album_id: UUID
+    release_id: UUID
     current_profile_id: UUID
     title: str
     genres: list[str]
@@ -37,7 +37,7 @@ class TrackUploadPayload:
     def to_message(self) -> dict[str, object]:
         return {
             "track_id": str(self.track_id),
-            "album_id": str(self.album_id),
+            "release_id": str(self.release_id),
             "current_profile_id": str(self.current_profile_id),
             "title": self.title,
             "genres": self.genres,
@@ -57,7 +57,7 @@ class TrackUploadPayload:
 
         return cls(
             track_id=UUID(str(payload["track_id"])),
-            album_id=UUID(str(payload["album_id"])),
+            release_id=UUID(str(payload["release_id"])),
             current_profile_id=UUID(str(payload["current_profile_id"])),
             title=str(payload["title"]),
             genres=genres,
@@ -73,10 +73,10 @@ def validate_track_filename(filename: str | None) -> None:
 
 
 def build_track_storage_key(
-    *, album_id: UUID, track_id: UUID, filename: str | None
+    *, release_id: UUID, track_id: UUID, filename: str | None
 ) -> str:
     suffix = Path(filename or "").suffix.lower()
-    return f"{album_id}/{track_id}{suffix}"
+    return f"{release_id}/{track_id}{suffix}"
 
 
 async def copy_upload_to_shared_tempfile(file: UploadFile) -> str:
@@ -95,15 +95,15 @@ async def copy_upload_to_shared_tempfile(file: UploadFile) -> str:
 
 class TrackUploadProcessor:
     def __init__(
-        self, uow: UnitOfWork, storage: MinioStorage, album_service: AlbumService
+        self, uow: UnitOfWork, storage: MinioStorage, release_service: ReleaseService
     ):
         self.uow = uow
         self.storage = storage
-        self.album_service = album_service
+        self.release_service = release_service
 
     async def process(self, payload: TrackUploadPayload) -> TrackDTO:
-        await self.album_service.get_owned_draft_album_by_id(
-            album_id=payload.album_id,
+        await self.release_service.get_owned_draft_release_by_id(
+            release_id=payload.release_id,
             profile_id=payload.current_profile_id,
         )
 
@@ -115,7 +115,7 @@ class TrackUploadProcessor:
             )
             track = await self.uow.tracks.create(
                 track_id=payload.track_id,
-                album_id=payload.album_id,
+                release_id=payload.release_id,
                 title=payload.title,
                 duration_seconds=duration_seconds,
                 path=payload.storage_key,

@@ -4,9 +4,9 @@ from typing import AsyncGenerator
 import uvicorn
 from fastapi import FastAPI
 
-from yn.modules.albums.route import router as albums_router
 from yn.modules.posts.route import router as posts_router
 from yn.modules.profiles.route import router as profiles_router
+from yn.modules.releases.route import router as releases_router
 from yn.modules.tracks.route import router as tracks_router
 from yn.modules.users.route import router as users_router
 from yn.shared.errors import register_exception_handlers
@@ -68,7 +68,7 @@ register_exception_handlers(app)
 app.include_router(users_router)
 app.include_router(profiles_router)
 app.include_router(posts_router)
-app.include_router(albums_router)
+app.include_router(releases_router)
 app.include_router(tracks_router)
 
 

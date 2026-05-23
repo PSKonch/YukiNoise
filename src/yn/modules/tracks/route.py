@@ -18,7 +18,7 @@ router = APIRouter(prefix="/tracks", tags=["tracks"])
 async def upload_track(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     track_service: Annotated[TrackService, Depends(get_track_service)],
-    album_id: Annotated[UUID, Form(...)],
+    release_id: Annotated[UUID, Form(...)],
     title: Annotated[str, Form(...)],
     file: Annotated[UploadFile, File(...)],
     genres: Annotated[list[str] | None, Form()] = None,
@@ -27,7 +27,7 @@ async def upload_track(
         raise ProfileNotFoundError
 
     track = await track_service.upload_track(
-        album_id=album_id,
+        release_id=release_id,
         current_profile_id=current_user.profile_id,
         title=title,
         genres=genres or [],
