@@ -44,7 +44,7 @@ def _parse_track_number_in_release(value: object) -> int:
 class TrackUploadPayload:
     track_id: UUID
     release_id: UUID
-    current_profile_id: UUID
+    current_artist_id: UUID
     title: str
     track_number_in_release: int
     genres: list[str]
@@ -55,7 +55,7 @@ class TrackUploadPayload:
         return {
             "track_id": str(self.track_id),
             "release_id": str(self.release_id),
-            "current_profile_id": str(self.current_profile_id),
+            "current_artist_id": str(self.current_artist_id),
             "title": self.title,
             "track_number_in_release": self.track_number_in_release,
             "genres": self.genres,
@@ -81,7 +81,7 @@ class TrackUploadPayload:
         return cls(
             track_id=UUID(str(payload["track_id"])),
             release_id=UUID(str(payload["release_id"])),
-            current_profile_id=UUID(str(payload["current_profile_id"])),
+            current_artist_id=UUID(str(payload["current_artist_id"])),
             title=str(payload["title"]),
             track_number_in_release=track_number_in_release,
             genres=genres,
@@ -130,7 +130,7 @@ class TrackUploadProcessor:
 
         await self.release_service.get_owned_draft_release_by_id(
             release_id=payload.release_id,
-            profile_id=payload.current_profile_id,
+            artist_id=payload.current_artist_id,
         )
 
         track = None

@@ -25,14 +25,14 @@ class ReleaseService:
 
     async def create_release(
         self,
-        profile_id: UUID,
+        artist_id: UUID,
         title: str,
         description: str | None = None,
         cover_path: str | None = None,
         release_type: ReleaseType = ReleaseType.ALBUM,
     ) -> ReleaseDTO:
         release = await self.uow.releases.create(
-            profile_id=profile_id,
+            artist_id=artist_id,
             title=title,
             description=description,
             cover_path=cover_path,
@@ -42,18 +42,18 @@ class ReleaseService:
 
     async def update_description_of_release(
         self,
-        profile_id: UUID,
+        artist_id: UUID,
         release_id: UUID,
         description: str,
     ) -> ReleaseDTO:
         release = await self.uow.releases.update_description(
             release_id=release_id,
-            profile_id=profile_id,
+            artist_id=artist_id,
             description=description,
         )
         if release is None:
             raise ReleaseNotFoundError
-        if release.profile_id != profile_id:
+        if release.artist_id != artist_id:
             raise ReleaseAccessDeniedError
         if release.status != ReleaseStatus.DRAFT:
             raise ReleaseNotDraftError
@@ -65,13 +65,13 @@ class ReleaseService:
 
     async def get_owned_releases(
         self,
-        profile_id: UUID,
+        artist_id: UUID,
         *,
         limit: int,
         offset: int,
     ) -> list[ReleaseDTO]:
         releases = await self.uow.releases.get_owned_releases(
-            profile_id=profile_id,
+            artist_id=artist_id,
             limit=limit,
             offset=offset,
         )
@@ -96,27 +96,27 @@ class ReleaseService:
     async def get_owned_release_by_id(
         self,
         release_id: UUID,
-        profile_id: UUID,
+        artist_id: UUID,
     ) -> ReleaseDTO:
         release = await self.uow.releases.get_owned_release_by_id(
             release_id=release_id,
-            profile_id=profile_id,
+            artist_id=artist_id,
         )
         if release is None:
             raise ReleaseNotFoundError
-        if release.profile_id != profile_id:
+        if release.artist_id != artist_id:
             raise ReleaseAccessDeniedError
         return ReleaseDTO.from_orm(release)
 
     async def get_owned_draft_release_by_id(
         self,
         release_id: UUID,
-        profile_id: UUID,
+        artist_id: UUID,
     ) -> ReleaseDTO:
         release = await self.uow.releases.get_release_by_id(release_id)
         if release is None:
             raise ReleaseNotFoundError
-        if release.profile_id != profile_id:
+        if release.artist_id != artist_id:
             raise ReleaseAccessDeniedError
         if release.status != ReleaseStatus.DRAFT:
             raise ReleaseNotDraftError
@@ -125,12 +125,12 @@ class ReleaseService:
     async def get_owned_scheduled_release_by_id(
         self,
         release_id: UUID,
-        profile_id: UUID,
+        artist_id: UUID,
     ) -> ReleaseDTO:
         release = await self.uow.releases.get_release_by_id(release_id)
         if release is None:
             raise ReleaseNotFoundError
-        if release.profile_id != profile_id:
+        if release.artist_id != artist_id:
             raise ReleaseAccessDeniedError
         if release.status != ReleaseStatus.SCHEDULED:
             raise ReleaseNotScheduledError
@@ -140,12 +140,12 @@ class ReleaseService:
         self,
         *,
         release_id: UUID,
-        profile_id: UUID,
+        artist_id: UUID,
         release_date: datetime,
     ) -> ReleaseDTO:
         await self.get_owned_draft_release_by_id(
             release_id=release_id,
-            profile_id=profile_id,
+            artist_id=artist_id,
         )
 
         normalized_release_date = self._normalize_release_date(release_date)
@@ -162,11 +162,11 @@ class ReleaseService:
         self,
         *,
         release_id: UUID,
-        profile_id: UUID,
+        artist_id: UUID,
     ) -> ReleaseDTO:
         await self.get_owned_scheduled_release_by_id(
             release_id=release_id,
-            profile_id=profile_id,
+            artist_id=artist_id,
         )
 
         updated_release = await self.uow.releases.unschedule_release(release_id)
@@ -199,13 +199,13 @@ class ReleaseService:
         self,
         *,
         release_id: UUID,
-        profile_id: UUID,
+        artist_id: UUID,
         file: UploadFile,
     ) -> ReleaseDTO:
         release = await self.uow.releases.get_release_by_id(release_id)
         if release is None:
             raise ReleaseNotFoundError
-        if release.profile_id != profile_id:
+        if release.artist_id != artist_id:
             raise ReleaseAccessDeniedError
 
         cover_path = self._build_cover_storage_key(
@@ -217,7 +217,7 @@ class ReleaseService:
             await self.storage.put(settings.minio_bucket, cover_path, file.file)
             updated_release = await self.uow.releases.update_cover_path(
                 release_id=release_id,
-                profile_id=profile_id,
+                artist_id=artist_id,
                 cover_path=cover_path,
             )
         except Exception as exc:

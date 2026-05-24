@@ -6,9 +6,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from yn.modules.artists.model import Artist
 from yn.modules.posts.errors import PostConflictError
 from yn.modules.posts.model import Post
-from yn.modules.profiles.model import Profile
 
 
 class PostRepository:
@@ -19,17 +19,17 @@ class PostRepository:
 
     async def create(
         self,
-        profile_id: UUID,
+        artist_id: UUID,
         title: str,
         content: str,
     ) -> Post:
         stmt = (
             insert(self.model)
-            .values(profile_id=profile_id, title=title, content=content)
+            .values(artist_id=artist_id, title=title, content=content)
             .returning(self.model)
             .options(
-                selectinload(self.model.profile).load_only(
-                    Profile.id, Profile.displayed_name
+                selectinload(self.model.artist).load_only(
+                    Artist.id, Artist.displayed_name
                 )
             )
         )
@@ -42,7 +42,7 @@ class PostRepository:
     async def update(
         self,
         post_id: UUID,
-        profile_id: UUID,
+        artist_id: UUID,
         title: str | None = None,
         content: str | None = None,
     ) -> bool:
@@ -57,35 +57,35 @@ class PostRepository:
 
         stmt = (
             update(self.model)
-            .where(and_(self.model.id == post_id, self.model.profile_id == profile_id))
+            .where(and_(self.model.id == post_id, self.model.artist_id == artist_id))
             .values(**values)
             .returning(self.model.id)
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-    async def hard_delete(self, post_id: UUID, profile_id: UUID) -> bool:
+    async def hard_delete(self, post_id: UUID, artist_id: UUID) -> bool:
         stmt = (
             delete(self.model)
-            .where(and_(self.model.id == post_id, self.model.profile_id == profile_id))
+            .where(and_(self.model.id == post_id, self.model.artist_id == artist_id))
             .returning(self.model.id)
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-    async def get_posts_by_profile_id(
-        self, profile_id: UUID, limit: int, offset: int
+    async def get_posts_by_artist_id(
+        self, artist_id: UUID, limit: int, offset: int
     ) -> Sequence[Post]:
         query = (
             select(self.model)
             .options(
-                selectinload(self.model.profile).load_only(
-                    Profile.id, Profile.displayed_name
+                selectinload(self.model.artist).load_only(
+                    Artist.id, Artist.displayed_name
                 )
             )
             .where(
                 and_(
-                    self.model.profile_id == profile_id,
+                    self.model.artist_id == artist_id,
                     self.model.deleted_at.is_(None),
                 )
             )
@@ -100,8 +100,8 @@ class PostRepository:
         query = (
             select(self.model)
             .options(
-                selectinload(self.model.profile).load_only(
-                    Profile.id, Profile.displayed_name
+                selectinload(self.model.artist).load_only(
+                    Artist.id, Artist.displayed_name
                 )
             )
             .where(self.model.deleted_at.is_(None))
@@ -128,8 +128,8 @@ class PostRepository:
         query = (
             select(self.model)
             .options(
-                selectinload(self.model.profile).load_only(
-                    Profile.id, Profile.displayed_name
+                selectinload(self.model.artist).load_only(
+                    Artist.id, Artist.displayed_name
                 )
             )
             .where(

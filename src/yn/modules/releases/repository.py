@@ -28,12 +28,12 @@ class ReleaseRepository:
     async def get_owned_release_by_id(
         self,
         release_id: UUID,
-        profile_id: UUID,
+        artist_id: UUID,
     ) -> Release | None:
         query = select(self.model).where(
             and_(
                 self.model.id == release_id,
-                self.model.profile_id == profile_id,
+                self.model.artist_id == artist_id,
                 self.model.deleted_at.is_(None),
             )
         )
@@ -42,7 +42,7 @@ class ReleaseRepository:
 
     async def create(
         self,
-        profile_id: UUID,
+        artist_id: UUID,
         title: str,
         description: str | None,
         cover_path: str | None = None,
@@ -51,7 +51,7 @@ class ReleaseRepository:
         stmt = (
             insert(self.model)
             .values(
-                profile_id=profile_id,
+                artist_id=artist_id,
                 title=title,
                 description=description,
                 cover_path=cover_path,
@@ -69,7 +69,7 @@ class ReleaseRepository:
     async def update_description(
         self,
         release_id: UUID,
-        profile_id: UUID,
+        artist_id: UUID,
         description: str | None,
     ) -> Release | None:
         stmt = (
@@ -77,7 +77,7 @@ class ReleaseRepository:
             .where(
                 and_(
                     self.model.id == release_id,
-                    self.model.profile_id == profile_id,
+                    self.model.artist_id == artist_id,
                     self.model.deleted_at.is_(None),
                     self.model.status.in_(
                         [ReleaseStatus.DRAFT, ReleaseStatus.SCHEDULED]
@@ -158,7 +158,7 @@ class ReleaseRepository:
     async def update_cover_path(
         self,
         release_id: UUID,
-        profile_id: UUID,
+        artist_id: UUID,
         cover_path: str | None,
     ) -> Release | None:
         stmt = (
@@ -166,7 +166,7 @@ class ReleaseRepository:
             .where(
                 and_(
                     self.model.id == release_id,
-                    self.model.profile_id == profile_id,
+                    self.model.artist_id == artist_id,
                     self.model.deleted_at.is_(None),
                 )
             )
@@ -207,7 +207,7 @@ class ReleaseRepository:
 
     async def get_owned_releases(
         self,
-        profile_id: UUID,
+        artist_id: UUID,
         limit: int,
         offset: int,
     ) -> Sequence[Release]:
@@ -216,7 +216,7 @@ class ReleaseRepository:
             .where(
                 and_(
                     self.model.deleted_at.is_(None),
-                    self.model.profile_id == profile_id,
+                    self.model.artist_id == artist_id,
                 )
             )
             .order_by(self.model.created_at.desc())
@@ -232,7 +232,7 @@ class ReleaseRepository:
         query = (
             select(self.model)
             .options(
-                joinedload(self.model.profile),
+                joinedload(self.model.artist),
                 selectinload(self.model.tracks),
             )
             .where(self.model.publicly_visible_clause())
@@ -249,7 +249,7 @@ class ReleaseRepository:
         query = (
             select(self.model)
             .options(
-                joinedload(self.model.profile),
+                joinedload(self.model.artist),
                 selectinload(self.model.tracks),
             )
             .where(

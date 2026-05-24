@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from yn.shared.database import Base
 
 if TYPE_CHECKING:
-    from yn.modules.profiles.model import Profile
+    from yn.modules.artists.model import Artist
 
 
 class User(Base):
@@ -36,8 +36,8 @@ class User(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
     # relationships
-    profile: Mapped["Profile"] = relationship(
-        "Profile",
+    artist: Mapped["Artist"] = relationship(
+        "Artist",
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan",

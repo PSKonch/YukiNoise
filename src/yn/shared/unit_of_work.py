@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from yn.shared.database import get_session
 
 if TYPE_CHECKING:
+    from yn.modules.artists.repository import ArtistRepository
     from yn.modules.posts.repository import PostRepository
-    from yn.modules.profiles.repository import ProfileRepository
     from yn.modules.releases.repository import ReleaseRepository
     from yn.modules.tracks.repository import TrackRepository
     from yn.modules.users.repository import UserRepository
@@ -17,7 +17,7 @@ class UnitOfWork:
     def __init__(self, session: AsyncSession):
         self._session = session
         self._users_repo: "UserRepository | None" = None
-        self._profiles_repo: "ProfileRepository | None" = None
+        self._artists_repo: "ArtistRepository | None" = None
         self._posts_repo: "PostRepository | None" = None
         self._releases_repo: "ReleaseRepository | None" = None
         self._tracks_repo: "TrackRepository | None" = None
@@ -33,14 +33,14 @@ class UnitOfWork:
         return self._users_repo
 
     @property
-    def profiles(self) -> "ProfileRepository":
-        if self._profiles_repo is None:
+    def artists(self) -> "ArtistRepository":
+        if self._artists_repo is None:
             from importlib import import_module
 
-            repo_mod = import_module("yn.modules.profiles.repository")
-            ProfileRepository = getattr(repo_mod, "ProfileRepository")
-            self._profiles_repo = ProfileRepository(self._session)
-        return self._profiles_repo
+            repo_mod = import_module("yn.modules.artists.repository")
+            ArtistRepository = getattr(repo_mod, "ArtistRepository")
+            self._artists_repo = ArtistRepository(self._session)
+        return self._artists_repo
 
     @property
     def posts(self) -> "PostRepository":

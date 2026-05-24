@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 @dataclass
 class PostDTO:
     id: UUID
-    profile_id: UUID
+    artist_id: UUID
     title: str
     content: str
     author_name: str | None = None
@@ -20,12 +20,12 @@ class PostDTO:
 
     @classmethod
     def from_orm(cls, post: "Post") -> "PostDTO":
-        profile = post.__dict__.get("profile")
-        author_name = profile.displayed_name if profile is not None else None
+        artist = post.__dict__.get("artist")
+        author_name = artist.displayed_name if artist is not None else None
 
         return cls(
             id=post.id,
-            profile_id=post.profile_id,
+            artist_id=post.artist_id,
             author_name=author_name,
             title=post.title,
             content=post.content,

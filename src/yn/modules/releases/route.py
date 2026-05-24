@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, UploadFile
 
-from yn.modules.profiles.errors import ProfileNotFoundError
+from yn.modules.artists.errors import ArtistNotFoundError
 from yn.modules.releases.cover_uploader import (
     ReleaseCoverUploadPayload,
     build_release_cover_storage_key,
@@ -33,11 +33,11 @@ async def create_release(
     release_service: Annotated[ReleaseService, Depends(get_release_service)],
     payload: ReleaseCreate,
 ) -> ReleaseRead:
-    if current_user.profile_id is None:
-        raise ProfileNotFoundError
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
 
     release = await release_service.create_release(
-        profile_id=current_user.profile_id,
+        artist_id=current_user.artist_id,
         title=payload.title,
         description=payload.description,
         cover_path=payload.cover_path,
@@ -53,11 +53,11 @@ async def update_release_description(
     release_id: UUID,
     description: str,
 ) -> ReleaseRead:
-    if current_user.profile_id is None:
-        raise ProfileNotFoundError
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
 
     release = await release_service.update_description_of_release(
-        profile_id=current_user.profile_id,
+        artist_id=current_user.artist_id,
         release_id=release_id,
         description=description,
     )
@@ -71,12 +71,12 @@ async def upload_release_cover(
     release_id: UUID,
     cover: Annotated[UploadFile, File(...)],
 ) -> ReleaseCoverUploadAccepted:
-    if current_user.profile_id is None:
-        raise ProfileNotFoundError
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
 
     await release_service.get_owned_release_by_id(
         release_id=release_id,
-        profile_id=current_user.profile_id,
+        artist_id=current_user.artist_id,
     )
 
     temp_path = await copy_upload_to_shared_tempfile(cover)
@@ -89,7 +89,7 @@ async def upload_release_cover(
         await process_release_cover_upload.kiq(
             payload=ReleaseCoverUploadPayload(
                 release_id=release_id,
-                profile_id=current_user.profile_id,
+                artist_id=current_user.artist_id,
                 cover_path=cover_path,
                 temp_path=temp_path,
             ).to_message()
@@ -127,11 +127,11 @@ async def get_owned_releases(
     release_service: Annotated[ReleaseService, Depends(get_release_service)],
     pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[ReleaseRead]:
-    if current_user.profile_id is None:
-        raise ProfileNotFoundError
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
 
     releases = await release_service.get_owned_releases(
-        profile_id=current_user.profile_id,
+        artist_id=current_user.artist_id,
         limit=pagination.limit,
         offset=pagination.offset,
     )
@@ -156,12 +156,12 @@ async def get_owned_release_by_id(
     release_service: Annotated[ReleaseService, Depends(get_release_service)],
     release_id: UUID,
 ) -> ReleaseRead:
-    if current_user.profile_id is None:
-        raise ProfileNotFoundError
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
 
     release = await release_service.get_owned_release_by_id(
         release_id=release_id,
-        profile_id=current_user.profile_id,
+        artist_id=current_user.artist_id,
     )
     return ReleaseRead.model_validate(release, from_attributes=True)
 
@@ -216,12 +216,12 @@ async def schedule_release(
     release_id: UUID,
     payload: ReleaseSchedule,
 ) -> ReleaseRead:
-    if current_user.profile_id is None:
-        raise ProfileNotFoundError
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
 
     release = await release_service.schedule_release(
         release_id=release_id,
-        profile_id=current_user.profile_id,
+        artist_id=current_user.artist_id,
         release_date=payload.release_date,
     )
     return ReleaseRead.model_validate(release, from_attributes=True)
@@ -233,11 +233,11 @@ async def cancel_release(
     release_service: Annotated[ReleaseService, Depends(get_release_service)],
     release_id: UUID,
 ) -> ReleaseRead:
-    if current_user.profile_id is None:
-        raise ProfileNotFoundError
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
 
     release = await release_service.unschedule_release(
         release_id=release_id,
-        profile_id=current_user.profile_id,
+        artist_id=current_user.artist_id,
     )
     return ReleaseRead.model_validate(release, from_attributes=True)

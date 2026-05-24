@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 @dataclass
 class ReleaseDTO:
     id: UUID
-    profile_id: UUID
+    artist_id: UUID
     title: str
     description: str | None
     cover_path: str | None
@@ -27,7 +27,7 @@ class ReleaseDTO:
     def from_orm(cls, release: "Release") -> "ReleaseDTO":
         return cls(
             id=release.id,
-            profile_id=release.profile_id,
+            artist_id=release.artist_id,
             title=release.title,
             release_type=release.release_type,
             description=getattr(release, "description", None),
@@ -43,7 +43,7 @@ class ReleaseDTO:
 @dataclass
 class ReleaseWithTracksAndAuthorDTO:
     id: UUID
-    profile_id: UUID
+    artist_id: UUID
     title: str
     description: str | None
     cover_path: str | None
@@ -57,20 +57,20 @@ class ReleaseWithTracksAndAuthorDTO:
 
     @classmethod
     def from_orm(cls, release: "Release") -> "ReleaseWithTracksAndAuthorDTO":
-        profile = release.__dict__.get("profile")
+        artist = release.__dict__.get("artist")
         tracks = [
             TrackDTO.from_orm(track) for track in release.__dict__.get("tracks", [])
         ]
 
         return cls(
             id=release.id,
-            profile_id=release.profile_id,
+            artist_id=release.artist_id,
             title=release.title,
             description=getattr(release, "description", None),
             cover_path=getattr(release, "cover_path", None),
             status=getattr(release, "status", "draft"),
             release_date=getattr(release, "release_date", None),
-            author_name=getattr(profile, "displayed_name", None),
+            author_name=getattr(artist, "displayed_name", None),
             tracks=tracks,
             created_at=getattr(release, "created_at", None),
             updated_at=getattr(release, "updated_at", None),

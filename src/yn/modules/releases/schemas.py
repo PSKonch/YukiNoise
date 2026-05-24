@@ -38,7 +38,7 @@ class ReleaseUpdate(BaseModel):
 
 class ReleaseRead(ReleaseBase):
     id: UUID
-    profile_id: UUID
+    artist_id: UUID
     status: str
     release_date: datetime | None = None
     created_at: datetime | None = None

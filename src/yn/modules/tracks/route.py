@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 
-from yn.modules.profiles.errors import ProfileNotFoundError
+from yn.modules.artists.errors import ArtistNotFoundError
 from yn.modules.tracks.deps import get_track_service
 from yn.modules.tracks.schemas import TrackRead, TrackUploadAccepted
 from yn.modules.tracks.service import TrackService
@@ -24,12 +24,12 @@ async def upload_track(
     file: Annotated[UploadFile, File(...)],
     genres: Annotated[list[str] | None, Form()] = None,
 ) -> TrackUploadAccepted:
-    if current_user.profile_id is None:
-        raise ProfileNotFoundError
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
 
     track = await track_service.upload_track(
         release_id=release_id,
-        current_profile_id=current_user.profile_id,
+        current_artist_id=current_user.artist_id,
         title=title,
         track_number_in_release=track_number_in_release,
         genres=genres or [],

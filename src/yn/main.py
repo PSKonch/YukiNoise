@@ -4,8 +4,8 @@ from typing import AsyncGenerator
 import uvicorn
 from fastapi import FastAPI
 
+from yn.modules.artists.route import router as artists_router
 from yn.modules.posts.route import router as posts_router
-from yn.modules.profiles.route import router as profiles_router
 from yn.modules.releases.route import router as releases_router
 from yn.modules.tracks.route import router as tracks_router
 from yn.modules.users.route import router as users_router
@@ -66,7 +66,7 @@ def get_minio() -> MinioStorage:
 register_exception_handlers(app)
 
 app.include_router(users_router)
-app.include_router(profiles_router)
+app.include_router(artists_router)
 app.include_router(posts_router)
 app.include_router(releases_router)
 app.include_router(tracks_router)

@@ -20,7 +20,7 @@ class PostUpdate(BaseModel):
 
 class PostRead(PostBase):
     id: UUID
-    profile_id: UUID
+    artist_id: UUID
     author_name: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None

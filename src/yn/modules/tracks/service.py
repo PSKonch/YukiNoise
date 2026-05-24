@@ -30,7 +30,7 @@ class TrackService:
         self,
         *,
         release_id: UUID,
-        current_profile_id: UUID,
+        current_artist_id: UUID,
         title: str,
         track_number_in_release: int,
         genres: list[str],
@@ -38,7 +38,7 @@ class TrackService:
     ) -> TrackUploadQueuedDTO:
         await self.release_service.get_owned_draft_release_by_id(
             release_id=release_id,
-            profile_id=current_profile_id,
+            artist_id=current_artist_id,
         )
 
         validate_track_number_in_release(track_number_in_release)
@@ -62,7 +62,7 @@ class TrackService:
                 payload=TrackUploadPayload(
                     track_id=track_id,
                     release_id=release_id,
-                    current_profile_id=current_profile_id,
+                    current_artist_id=current_artist_id,
                     title=title,
                     track_number_in_release=track_number_in_release,
                     genres=genres,

@@ -20,14 +20,14 @@ from yn.shared.unit_of_work import UnitOfWork
 @dataclass(slots=True)
 class ReleaseCoverUploadPayload:
     release_id: UUID
-    profile_id: UUID
+    artist_id: UUID
     cover_path: str
     temp_path: str
 
     def to_message(self) -> dict[str, object]:
         return {
             "release_id": str(self.release_id),
-            "profile_id": str(self.profile_id),
+            "artist_id": str(self.artist_id),
             "cover_path": self.cover_path,
             "temp_path": self.temp_path,
         }
@@ -36,7 +36,7 @@ class ReleaseCoverUploadPayload:
     def from_message(cls, payload: dict[str, object]) -> "ReleaseCoverUploadPayload":
         return cls(
             release_id=UUID(str(payload["release_id"])),
-            profile_id=UUID(str(payload["profile_id"])),
+            artist_id=UUID(str(payload["artist_id"])),
             cover_path=str(payload["cover_path"]),
             temp_path=str(payload["temp_path"]),
         )
@@ -70,7 +70,7 @@ class ReleaseCoverUploadProcessor:
         release = await self.uow.releases.get_release_by_id(payload.release_id)
         if release is None:
             raise ReleaseNotFoundError
-        if release.profile_id != payload.profile_id:
+        if release.artist_id != payload.artist_id:
             raise ReleaseAccessDeniedError
 
         try:
@@ -79,7 +79,7 @@ class ReleaseCoverUploadProcessor:
             )
             updated_release = await self.uow.releases.update_cover_path(
                 release_id=payload.release_id,
-                profile_id=payload.profile_id,
+                artist_id=payload.artist_id,
                 cover_path=payload.cover_path,
             )
         except Exception as exc:

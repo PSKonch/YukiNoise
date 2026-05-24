@@ -12,7 +12,7 @@ from yn.modules.releases.enums import ReleaseStatus, ReleaseType
 from yn.shared.database import Base
 
 if TYPE_CHECKING:
-    from yn.modules.profiles.model import Profile
+    from yn.modules.artists.model import Artist
     from yn.modules.tracks.model import Track
 
 
@@ -22,7 +22,7 @@ class Release(Base):
         Index("ix_releases_created_at", "created_at", postgresql_using="btree"),
         Index("ix_releases_updated_at", "updated_at", postgresql_using="btree"),
         Index("ix_releases_deleted_at", "deleted_at", postgresql_using="btree"),
-        Index("ix_releases_profile_id", "profile_id", postgresql_using="btree"),
+        Index("ix_releases_artist_id", "artist_id", postgresql_using="btree"),
         Index("ix_releases_status", "status", postgresql_using="btree"),
         Index(
             "ix_releases_release_date",
@@ -40,9 +40,9 @@ class Release(Base):
     id: Mapped[PyUUID] = mapped_column(
         SA_UUID(as_uuid=True), primary_key=True, default=uuid4
     )
-    profile_id: Mapped[PyUUID] = mapped_column(
+    artist_id: Mapped[PyUUID] = mapped_column(
         SA_UUID(as_uuid=True),
-        ForeignKey("profiles.id", ondelete="CASCADE"),
+        ForeignKey("artists.id", ondelete="CASCADE"),
         nullable=False,
     )
 
@@ -69,7 +69,7 @@ class Release(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
     # Relationships
-    profile: Mapped["Profile"] = relationship("Profile", back_populates="releases")
+    artist: Mapped["Artist"] = relationship("Artist", back_populates="releases")
     tracks: Mapped[list["Track"]] = relationship("Track", back_populates="release")
 
     @classmethod
