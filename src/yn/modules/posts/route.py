@@ -3,13 +3,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
+from yn.modules.artists.errors import ArtistNotFoundError
 from yn.modules.posts.deps import get_post_service
 from yn.modules.posts.errors import (
     EmptyPostUpdateError,
 )
 from yn.modules.posts.schemas import PostCreate, PostRead, PostUpdate
 from yn.modules.posts.service import PostService
-from yn.modules.profiles.errors import ProfileNotFoundError
 from yn.modules.users.auth import get_current_user
 from yn.modules.users.dto import UserDTO
 from yn.shared.pagination import PaginationParams, get_pagination_params
@@ -23,11 +23,11 @@ async def create_post(
     post_service: Annotated[PostService, Depends(get_post_service)],
     payload: PostCreate,
 ) -> PostRead:
-    if current_user.profile_id is None:
-        raise ProfileNotFoundError
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
 
     post = await post_service.create_post(
-        profile_id=current_user.profile_id,
+        artist_id=current_user.artist_id,
         title=payload.title,
         content=payload.content,
     )
@@ -41,15 +41,15 @@ async def update_post(
     post_service: Annotated[PostService, Depends(get_post_service)],
     payload: PostUpdate,
 ) -> dict[str, str]:
-    if current_user.profile_id is None:
-        raise ProfileNotFoundError
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
 
     if payload.title is None and payload.content is None:
         raise EmptyPostUpdateError
 
     await post_service.update_post(
         post_id=post_id,
-        profile_id=current_user.profile_id,
+        artist_id=current_user.artist_id,
         title=payload.title,
         content=payload.content,
     )
@@ -63,10 +63,10 @@ async def delete_post(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     post_service: Annotated[PostService, Depends(get_post_service)],
 ) -> dict[str, str]:
-    if current_user.profile_id is None:
-        raise ProfileNotFoundError
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
 
-    await post_service.delete_post(post_id=post_id, profile_id=current_user.profile_id)
+    await post_service.delete_post(post_id=post_id, artist_id=current_user.artist_id)
 
     return {"detail": "Post deleted successfully"}
 

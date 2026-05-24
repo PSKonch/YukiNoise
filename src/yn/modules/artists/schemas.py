@@ -4,21 +4,21 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 
-class ProfileBase(BaseModel):
+class ArtistBase(BaseModel):
     displayed_name: str | None = None
     bio: str | None = None
     social_links: dict[str, str] | None = None
 
 
-class ProfileCreate(ProfileBase):
+class ArtistCreate(ArtistBase):
     displayed_name: str
 
 
-class ProfileUpdate(ProfileBase):
+class ArtistUpdate(ArtistBase):
     pass
 
 
-class ProfileRead(ProfileBase):
+class ArtistRead(ArtistBase):
     id: UUID
     user_id: UUID
     created_at: datetime | None = None
@@ -26,5 +26,5 @@ class ProfileRead(ProfileBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class Profile(ProfileRead):
+class Artist(ArtistRead):
     pass

@@ -14,5 +14,5 @@ This project uses a `src/` layout, so the package must be installed into the act
 
 - Track uploads now accept only `mp3` and `wav` files.
 - Track ingestion is queued through Taskiq; run the worker with `taskiq worker yn.tasks:broker`.
-- Album covers are queued through Taskiq and uploaded to MinIO in the worker.
-- Scheduled album releases are handled by the Taskiq scheduler; run it with `taskiq scheduler yn.tasks.scheduler:scheduler yn.tasks`.
+- Release covers are queued through Taskiq and uploaded to MinIO in the worker.
+- Scheduled releases are handled by the Taskiq scheduler; run it with `taskiq scheduler yn.tasks.scheduler:scheduler yn.tasks`.

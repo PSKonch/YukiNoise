@@ -10,9 +10,10 @@ if TYPE_CHECKING:
 @dataclass
 class TrackDTO:
     id: UUID
-    album_id: UUID
+    release_id: UUID
     title: str
     duration_seconds: int
+    track_number_in_release: int
     path: str
     genres: list[str]
     created_at: datetime | None
@@ -22,9 +23,10 @@ class TrackDTO:
     def from_orm(cls, track: "Track") -> "TrackDTO":
         return cls(
             id=track.id,
-            album_id=track.album_id,
+            release_id=track.release_id,
             title=track.title,
             duration_seconds=track.duration_seconds,
+            track_number_in_release=track.track_number_in_release,
             path=track.path,
             genres=track.genres,
             created_at=getattr(track, "created_at", None),
@@ -35,6 +37,7 @@ class TrackDTO:
 @dataclass
 class TrackUploadQueuedDTO:
     track_id: UUID
-    album_id: UUID
+    release_id: UUID
     title: str
+    track_number_in_release: int
     status: str = "queued"

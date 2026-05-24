@@ -7,10 +7,10 @@ from uuid import UUID
 
 from fastapi import UploadFile
 
-from yn.modules.albums.errors import (
-    AlbumAccessDeniedError,
-    AlbumNotFoundError,
-    AlbumPictureUploadFailedError,
+from yn.modules.releases.errors import (
+    ReleaseAccessDeniedError,
+    ReleaseCoverUploadFailedError,
+    ReleaseNotFoundError,
 )
 from yn.shared.minio import MinioStorage
 from yn.shared.settings import settings
@@ -18,33 +18,33 @@ from yn.shared.unit_of_work import UnitOfWork
 
 
 @dataclass(slots=True)
-class AlbumPictureUploadPayload:
-    album_id: UUID
-    profile_id: UUID
-    picture_path: str
+class ReleaseCoverUploadPayload:
+    release_id: UUID
+    artist_id: UUID
+    cover_path: str
     temp_path: str
 
     def to_message(self) -> dict[str, object]:
         return {
-            "album_id": str(self.album_id),
-            "profile_id": str(self.profile_id),
-            "picture_path": self.picture_path,
+            "release_id": str(self.release_id),
+            "artist_id": str(self.artist_id),
+            "cover_path": self.cover_path,
             "temp_path": self.temp_path,
         }
 
     @classmethod
-    def from_message(cls, payload: dict[str, object]) -> "AlbumPictureUploadPayload":
+    def from_message(cls, payload: dict[str, object]) -> "ReleaseCoverUploadPayload":
         return cls(
-            album_id=UUID(str(payload["album_id"])),
-            profile_id=UUID(str(payload["profile_id"])),
-            picture_path=str(payload["picture_path"]),
+            release_id=UUID(str(payload["release_id"])),
+            artist_id=UUID(str(payload["artist_id"])),
+            cover_path=str(payload["cover_path"]),
             temp_path=str(payload["temp_path"]),
         )
 
 
-def build_album_picture_storage_key(*, album_id: UUID, filename: str | None) -> str:
+def build_release_cover_storage_key(*, release_id: UUID, filename: str | None) -> str:
     suffix = Path(filename or "").suffix.lower()
-    return f"albums/{album_id}/cover{suffix}"
+    return f"releases/{release_id}/cover{suffix}"
 
 
 async def copy_upload_to_shared_tempfile(file: UploadFile) -> str:
@@ -61,36 +61,36 @@ async def copy_upload_to_shared_tempfile(file: UploadFile) -> str:
     return await asyncio.to_thread(write_tempfile)
 
 
-class AlbumPictureUploadProcessor:
+class ReleaseCoverUploadProcessor:
     def __init__(self, uow: UnitOfWork, storage: MinioStorage):
         self.uow = uow
         self.storage = storage
 
-    async def process(self, payload: AlbumPictureUploadPayload) -> None:
-        album = await self.uow.albums.get_album_by_id(payload.album_id)
-        if album is None:
-            raise AlbumNotFoundError
-        if album.profile_id != payload.profile_id:
-            raise AlbumAccessDeniedError
+    async def process(self, payload: ReleaseCoverUploadPayload) -> None:
+        release = await self.uow.releases.get_release_by_id(payload.release_id)
+        if release is None:
+            raise ReleaseNotFoundError
+        if release.artist_id != payload.artist_id:
+            raise ReleaseAccessDeniedError
 
         try:
             await self._upload_to_storage(
-                storage_key=payload.picture_path, temp_path=payload.temp_path
+                storage_key=payload.cover_path, temp_path=payload.temp_path
             )
-            updated_album = await self.uow.albums.update_picture_path(
-                album_id=payload.album_id,
-                profile_id=payload.profile_id,
-                picture_path=payload.picture_path,
+            updated_release = await self.uow.releases.update_cover_path(
+                release_id=payload.release_id,
+                artist_id=payload.artist_id,
+                cover_path=payload.cover_path,
             )
         except Exception as exc:
-            await self._safe_delete_from_storage(payload.picture_path)
-            raise AlbumPictureUploadFailedError from exc
+            await self._safe_delete_from_storage(payload.cover_path)
+            raise ReleaseCoverUploadFailedError from exc
         finally:
             await self._cleanup_tempfile(payload.temp_path)
 
-        if updated_album is None:
-            await self._safe_delete_from_storage(payload.picture_path)
-            raise AlbumNotFoundError
+        if updated_release is None:
+            await self._safe_delete_from_storage(payload.cover_path)
+            raise ReleaseNotFoundError
 
     async def _upload_to_storage(self, *, storage_key: str, temp_path: str) -> None:
         with Path(temp_path).open("rb") as stream:

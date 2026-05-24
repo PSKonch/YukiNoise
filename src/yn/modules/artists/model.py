@@ -11,19 +11,19 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from yn.shared.database import Base
 
 if TYPE_CHECKING:
-    from yn.modules.albums.model import Album
     from yn.modules.posts.model import Post
+    from yn.modules.releases.model import Release
     from yn.modules.users.model import User
 
 
-class Profile(Base):
-    __tablename__ = "profiles"
+class Artist(Base):
+    __tablename__ = "artists"
     __table_args__ = (
-        Index("ix_profiles_search_vector", "search_vector", postgresql_using="gin"),
-        Index("ix_profiles_created_at", "created_at", postgresql_using="btree"),
-        Index("ix_profiles_deleted_at", "deleted_at", postgresql_using="btree"),
+        Index("ix_artists_search_vector", "search_vector", postgresql_using="gin"),
+        Index("ix_artists_created_at", "created_at", postgresql_using="btree"),
+        Index("ix_artists_deleted_at", "deleted_at", postgresql_using="btree"),
         Index(
-            "ix_profiles_displayed_name_trgm",
+            "ix_artists_displayed_name_trgm",
             "displayed_name",
             postgresql_using="gin",
             postgresql_ops={"displayed_name": "gin_trgm_ops"},
@@ -69,6 +69,6 @@ class Profile(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
     # relationships
-    user: Mapped["User"] = relationship("User", back_populates="profile")
-    posts: Mapped[list["Post"]] = relationship("Post", back_populates="profile")
-    albums: Mapped[list["Album"]] = relationship("Album", back_populates="profile")
+    user: Mapped["User"] = relationship("User", back_populates="artist")
+    posts: Mapped[list["Post"]] = relationship("Post", back_populates="artist")
+    releases: Mapped[list["Release"]] = relationship("Release", back_populates="artist")

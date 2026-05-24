@@ -3,10 +3,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
+from yn.modules.releases.enums import ReleaseType
+
 
 class TrackRead(BaseModel):
     id: UUID
-    album_id: UUID
+    release_id: UUID
     title: str
     duration_seconds: int
     path: str
@@ -17,25 +19,26 @@ class TrackRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class AlbumBase(BaseModel):
+class ReleaseBase(BaseModel):
     title: str
     description: str | None = None
-    picture_path: str | None = None
+    cover_path: str | None = None
+    release_type: ReleaseType
 
 
-class AlbumCreate(AlbumBase):
+class ReleaseCreate(ReleaseBase):
     pass
 
 
-class AlbumUpdate(BaseModel):
+class ReleaseUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
-    picture_path: str | None = None
+    cover_path: str | None = None
 
 
-class AlbumRead(AlbumBase):
+class ReleaseRead(ReleaseBase):
     id: UUID
-    profile_id: UUID
+    artist_id: UUID
     status: str
     release_date: datetime | None = None
     created_at: datetime | None = None
@@ -45,17 +48,17 @@ class AlbumRead(AlbumBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class AlbumPictureUploadAccepted(BaseModel):
-    album_id: UUID
+class ReleaseCoverUploadAccepted(BaseModel):
+    release_id: UUID
     status: str = "queued"
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class AlbumWithTracksAndAuthorRead(AlbumRead):
+class ReleaseWithTracksAndAuthorRead(ReleaseRead):
     author_name: str | None = None
     tracks: list[TrackRead] = []
 
 
-class AlbumReleaseSchedule(BaseModel):
+class ReleaseSchedule(BaseModel):
     release_date: datetime

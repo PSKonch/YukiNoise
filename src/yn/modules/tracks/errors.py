@@ -10,7 +10,13 @@ class TrackUploadFailedError(AppError):
 class TrackConflictError(AppError):
     status_code = 409
     code = "track_conflict"
-    detail = "A track with this title already exists in the album"
+    detail = "A track with this title or position already exists in the release"
+
+
+class TrackPositionError(AppError):
+    status_code = 400
+    code = "track_position_invalid"
+    detail = "Track position in release must be greater than 0"
 
 
 class TrackFormatError(AppError):
@@ -23,3 +29,9 @@ class TrackMetadataError(AppError):
     status_code = 400
     code = "track_metadata_error"
     detail = "Could not read audio metadata"
+
+
+class TrackNotFoundError(AppError):
+    status_code = 404
+    code = "track_not_found"
+    detail = "Track not found"

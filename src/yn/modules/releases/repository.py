@@ -2,37 +2,38 @@ from datetime import datetime
 from typing import Sequence
 from uuid import UUID
 
-from sqlalchemy import and_, func, insert, or_, select, update
+from sqlalchemy import and_, func, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from yn.modules.albums.errors import AlbumConflictError
-from yn.modules.albums.model import Album
+from yn.modules.releases.enums import ReleaseStatus, ReleaseType
+from yn.modules.releases.errors import ReleaseConflictError
+from yn.modules.releases.model import Release
 
 
-class AlbumRepository:
-    model = Album
+class ReleaseRepository:
+    model = Release
 
     def __init__(self, session: AsyncSession):
         self._session = session
 
-    async def get_album_by_id(self, album_id: UUID) -> Album | None:
+    async def get_release_by_id(self, release_id: UUID) -> Release | None:
         query = select(self.model).where(
-            and_(self.model.id == album_id, self.model.deleted_at.is_(None))
+            and_(self.model.id == release_id, self.model.deleted_at.is_(None))
         )
         result = await self._session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_owned_album_by_id(
+    async def get_owned_release_by_id(
         self,
-        album_id: UUID,
-        profile_id: UUID,
-    ) -> Album | None:
+        release_id: UUID,
+        artist_id: UUID,
+    ) -> Release | None:
         query = select(self.model).where(
             and_(
-                self.model.id == album_id,
-                self.model.profile_id == profile_id,
+                self.model.id == release_id,
+                self.model.artist_id == artist_id,
                 self.model.deleted_at.is_(None),
             )
         )
@@ -41,42 +42,46 @@ class AlbumRepository:
 
     async def create(
         self,
-        profile_id: UUID,
+        artist_id: UUID,
         title: str,
         description: str | None,
-        picture_path: str | None = None,
-    ) -> Album:
+        cover_path: str | None = None,
+        release_type: ReleaseType = ReleaseType.ALBUM,
+    ) -> Release:
         stmt = (
             insert(self.model)
             .values(
-                profile_id=profile_id,
+                artist_id=artist_id,
                 title=title,
                 description=description,
-                picture_path=picture_path,
-                status="draft",
+                cover_path=cover_path,
+                status=ReleaseStatus.DRAFT,
+                release_type=release_type,
             )
             .returning(self.model)
         )
         try:
             result = await self._session.execute(stmt)
         except IntegrityError as exc:
-            raise AlbumConflictError from exc
+            raise ReleaseConflictError from exc
         return result.scalar_one()
 
     async def update_description(
         self,
-        album_id: UUID,
-        profile_id: UUID,
+        release_id: UUID,
+        artist_id: UUID,
         description: str | None,
-    ) -> Album | None:
+    ) -> Release | None:
         stmt = (
             update(self.model)
             .where(
                 and_(
-                    self.model.id == album_id,
-                    self.model.profile_id == profile_id,
+                    self.model.id == release_id,
+                    self.model.artist_id == artist_id,
                     self.model.deleted_at.is_(None),
-                    self.model.status != "published",
+                    self.model.status.in_(
+                        [ReleaseStatus.DRAFT, ReleaseStatus.SCHEDULED]
+                    ),
                 )
             )
             .values(description=description)
@@ -85,63 +90,63 @@ class AlbumRepository:
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def release_album(self, album_id: UUID) -> Album | None:
+    async def release(self, release_id: UUID) -> Release | None:
         stmt = (
             update(self.model)
             .where(
                 and_(
-                    self.model.id == album_id,
+                    self.model.id == release_id,
                     self.model.deleted_at.is_(None),
-                    self.model.status == "scheduled",
+                    self.model.status == ReleaseStatus.SCHEDULED,
                 )
             )
-            .values(status="published")
+            .values(status=ReleaseStatus.PUBLISHED)
             .returning(self.model)
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def schedule_release_album(
-        self, album_id: UUID, release_date: datetime
-    ) -> Album | None:
+    async def schedule_release(
+        self, release_id: UUID, release_date: datetime
+    ) -> Release | None:
         stmt = (
             update(self.model)
             .where(
                 and_(
-                    self.model.id == album_id,
+                    self.model.id == release_id,
                     self.model.deleted_at.is_(None),
-                    self.model.status == "draft",
+                    self.model.status == ReleaseStatus.DRAFT,
                 )
             )
-            .values(status="scheduled", release_date=release_date)
+            .values(status=ReleaseStatus.SCHEDULED, release_date=release_date)
             .returning(self.model)
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def unschedule_release_album(self, album_id: UUID) -> Album | None:
+    async def unschedule_release(self, release_id: UUID) -> Release | None:
         stmt = (
             update(self.model)
             .where(
                 and_(
-                    self.model.id == album_id,
+                    self.model.id == release_id,
                     self.model.deleted_at.is_(None),
-                    self.model.status == "scheduled",
+                    self.model.status == ReleaseStatus.SCHEDULED,
                 )
             )
-            .values(status="draft", release_date=None)
+            .values(status=ReleaseStatus.DRAFT, release_date=None)
             .returning(self.model)
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get_scheduled_albums_due_for_release(self) -> Sequence[Album]:
+    async def get_scheduled_releases_due_for_release(self) -> Sequence[Release]:
         query = (
             select(self.model)
             .where(
                 and_(
                     self.model.deleted_at.is_(None),
-                    self.model.status == "scheduled",
+                    self.model.status == ReleaseStatus.SCHEDULED,
                     self.model.release_date <= func.now(),
                 )
             )
@@ -150,22 +155,22 @@ class AlbumRepository:
         result = await self._session.execute(query)
         return result.scalars().all()
 
-    async def update_picture_path(
+    async def update_cover_path(
         self,
-        album_id: UUID,
-        profile_id: UUID,
-        picture_path: str | None,
-    ) -> Album | None:
+        release_id: UUID,
+        artist_id: UUID,
+        cover_path: str | None,
+    ) -> Release | None:
         stmt = (
             update(self.model)
             .where(
                 and_(
-                    self.model.id == album_id,
-                    self.model.profile_id == profile_id,
+                    self.model.id == release_id,
+                    self.model.artist_id == artist_id,
                     self.model.deleted_at.is_(None),
                 )
             )
-            .values(picture_path=picture_path)
+            .values(cover_path=cover_path)
             .returning(self.model)
         )
         result = await self._session.execute(stmt)
@@ -173,21 +178,13 @@ class AlbumRepository:
 
     async def trgm_search_by_title(
         self, search_term: str, limit: int, offset: int
-    ) -> Sequence[Album]:
-        public_visibility = or_(
-            self.model.status == "published",
-            and_(
-                self.model.status == "scheduled",
-                self.model.release_date <= func.now(),
-            ),
-        )
+    ) -> Sequence[Release]:
         query = (
             select(self.model)
             .where(
                 and_(
-                    self.model.deleted_at.is_(None),
+                    self.model.publicly_visible_clause(),
                     self.model.title.op("%")(search_term),
-                    public_visibility,
                 )
             )
             .order_by(func.similarity(self.model.title, search_term).desc())
@@ -197,22 +194,10 @@ class AlbumRepository:
         result = await self._session.execute(query)
         return result.scalars().all()
 
-    async def get_albums(self, limit: int, offset: int) -> Sequence[Album]:
-        public_visibility = or_(
-            self.model.status == "published",
-            and_(
-                self.model.status == "scheduled",
-                self.model.release_date <= func.now(),
-            ),
-        )
+    async def get_releases(self, limit: int, offset: int) -> Sequence[Release]:
         query = (
             select(self.model)
-            .where(
-                and_(
-                    self.model.deleted_at.is_(None),
-                    public_visibility,
-                )
-            )
+            .where(self.model.publicly_visible_clause())
             .order_by(self.model.created_at.desc())
             .limit(limit)
             .offset(offset)
@@ -220,18 +205,18 @@ class AlbumRepository:
         result = await self._session.execute(query)
         return result.scalars().all()
 
-    async def get_owned_albums(
+    async def get_owned_releases(
         self,
-        profile_id: UUID,
+        artist_id: UUID,
         limit: int,
         offset: int,
-    ) -> Sequence[Album]:
+    ) -> Sequence[Release]:
         query = (
             select(self.model)
             .where(
                 and_(
                     self.model.deleted_at.is_(None),
-                    self.model.profile_id == profile_id,
+                    self.model.artist_id == artist_id,
                 )
             )
             .order_by(self.model.created_at.desc())
@@ -241,28 +226,16 @@ class AlbumRepository:
         result = await self._session.execute(query)
         return result.scalars().all()
 
-    async def get_albums_with_tracks_and_author_profile(
+    async def get_releases_with_tracks_and_author_profile(
         self, limit: int, offset: int
-    ) -> Sequence[Album]:
-        public_visibility = or_(
-            self.model.status == "published",
-            and_(
-                self.model.status == "scheduled",
-                self.model.release_date <= func.now(),
-            ),
-        )
+    ) -> Sequence[Release]:
         query = (
             select(self.model)
             .options(
-                joinedload(self.model.profile),
+                joinedload(self.model.artist),
                 selectinload(self.model.tracks),
             )
-            .where(
-                and_(
-                    self.model.deleted_at.is_(None),
-                    public_visibility,
-                )
-            )
+            .where(self.model.publicly_visible_clause())
             .order_by(self.model.created_at.desc())
             .limit(limit)
             .offset(offset)
@@ -270,20 +243,19 @@ class AlbumRepository:
         result = await self._session.execute(query)
         return result.scalars().unique().all()
 
-    async def get_album_with_tracks_and_author_profile_by_id(
-        self, album_id: UUID
-    ) -> Album | None:
+    async def get_release_with_tracks_and_author_profile_by_id(
+        self, release_id: UUID
+    ) -> Release | None:
         query = (
             select(self.model)
             .options(
-                joinedload(self.model.profile),
+                joinedload(self.model.artist),
                 selectinload(self.model.tracks),
             )
             .where(
                 and_(
-                    self.model.id == album_id,
-                    self.model.deleted_at.is_(None),
-                    self.model.status == "published",
+                    self.model.id == release_id,
+                    self.model.publicly_visible_clause(),
                 )
             )
         )

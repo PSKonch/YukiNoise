@@ -14,19 +14,19 @@ class PostService:
 
     async def create_post(
         self,
-        profile_id: UUID,
+        artist_id: UUID,
         title: str,
         content: str,
     ) -> PostDTO:
         post = await self.uow.posts.create(
-            profile_id=profile_id, title=title, content=content
+            artist_id=artist_id, title=title, content=content
         )
         return PostDTO.from_orm(post)
 
     async def update_post(
         self,
         post_id: UUID,
-        profile_id: UUID,
+        artist_id: UUID,
         title: str | None = None,
         content: str | None = None,
     ) -> bool:
@@ -34,14 +34,14 @@ class PostService:
             raise EmptyPostUpdateError
 
         updated = await self.uow.posts.update(
-            post_id=post_id, profile_id=profile_id, title=title, content=content
+            post_id=post_id, artist_id=artist_id, title=title, content=content
         )
         if not updated:
             raise PostNotFoundError
         return updated
 
-    async def delete_post(self, post_id: UUID, profile_id: UUID) -> bool:
-        deleted = await self.uow.posts.hard_delete(post_id, profile_id)
+    async def delete_post(self, post_id: UUID, artist_id: UUID) -> bool:
+        deleted = await self.uow.posts.hard_delete(post_id, artist_id)
         if not deleted:
             raise PostNotFoundError
         return deleted

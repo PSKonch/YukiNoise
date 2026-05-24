@@ -6,12 +6,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from yn.modules.profiles.errors import ProfileConflictError
-from yn.modules.profiles.model import Profile
+from yn.modules.artists.errors import ArtistConflictError
+from yn.modules.artists.model import Artist
 
 
-class ProfileRepository:
-    model = Profile
+class ArtistRepository:
+    model = Artist
 
     def __init__(self, session: AsyncSession):
         self._session = session
@@ -22,7 +22,7 @@ class ProfileRepository:
         displayed_name: str,
         bio: str | None = None,
         social_links: dict[str, str] | None = None,
-    ) -> Profile:
+    ) -> Artist:
         stmt = (
             insert(self.model)
             .values(
@@ -36,7 +36,7 @@ class ProfileRepository:
         try:
             result = await self._session.execute(stmt)
         except IntegrityError as exc:
-            raise ProfileConflictError from exc
+            raise ArtistConflictError from exc
         return result.scalar_one()
 
     async def update(
@@ -66,10 +66,10 @@ class ProfileRepository:
         try:
             result = await self._session.execute(stmt)
         except IntegrityError as exc:
-            raise ProfileConflictError from exc
+            raise ArtistConflictError from exc
         return result.scalar_one_or_none() is not None
 
-    async def get_profiles(self, limit: int, offset: int) -> Sequence[Profile]:
+    async def get_artists(self, limit: int, offset: int) -> Sequence[Artist]:
         query = (
             select(self.model)
             .where(self.model.deleted_at.is_(None))
@@ -80,38 +80,33 @@ class ProfileRepository:
         result = await self._session.execute(query)
         return result.scalars().all()
 
-    async def get_profile_by_id(self, profile_id: UUID) -> Profile | None:
-        query = select(self.model).where(self.model.id == profile_id)
+    async def get_artist_by_id(self, artist_id: UUID) -> Artist | None:
+        query = select(self.model).where(self.model.id == artist_id)
         result = await self._session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_profile_by_user_id(self, user_id: UUID) -> Profile | None:
+    async def get_artist_by_user_id(self, user_id: UUID) -> Artist | None:
         query = select(self.model).where(self.model.user_id == user_id)
         result = await self._session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_profile_by_displayed_name(
-        self, displayed_name: str
-    ) -> Profile | None:
+    async def get_artist_by_displayed_name(self, displayed_name: str) -> Artist | None:
         query = select(self.model).where(self.model.displayed_name == displayed_name)
         result = await self._session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_profile_with_user_by_id(self, profile_id: UUID) -> Profile | None:
+    async def get_artist_with_user_by_id(self, artist_id: UUID) -> Artist | None:
         query = (
             select(self.model)
             .options(selectinload(self.model.user))
-            .where(self.model.id == profile_id)
+            .where(self.model.id == artist_id)
         )
         result = await self._session.execute(query)
         return result.scalar_one_or_none()
 
-    async def full_text_search_profiles(
+    async def full_text_search_artists(
         self, search: str, limit: int, offset: int
-    ) -> Sequence[Profile]:
-        """
-        Search profiles by displayed name and bio using full-text search
-        """
+    ) -> Sequence[Artist]:
         ts_query_en = func.websearch_to_tsquery("english", search)
         ts_query_ru = func.websearch_to_tsquery("russian", search)
 
@@ -137,9 +132,9 @@ class ProfileRepository:
         result = await self._session.execute(query)
         return result.scalars().all()
 
-    async def trgm_search_profiles_by_displayed_name(
+    async def trgm_search_artists_by_displayed_name(
         self, search_term: str, limit: int, offset: int
-    ) -> Sequence[Profile]:
+    ) -> Sequence[Artist]:
         query = (
             select(self.model)
             .where(
@@ -155,7 +150,7 @@ class ProfileRepository:
         result = await self._session.execute(query)
         return result.scalars().all()
 
-    async def soft_delete_profile(self, user_id: UUID) -> bool:
+    async def soft_delete_artist(self, user_id: UUID) -> bool:
         stmt = (
             update(self.model)
             .where(and_(self.model.user_id == user_id, self.model.deleted_at.is_(None)))
@@ -165,7 +160,7 @@ class ProfileRepository:
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-    async def restore_profile(self, user_id: UUID) -> bool:
+    async def restore_artist(self, user_id: UUID) -> bool:
         stmt = (
             update(self.model)
             .where(self.model.user_id == user_id)
@@ -175,7 +170,7 @@ class ProfileRepository:
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-    async def hard_delete_profile(self, user_id: UUID) -> bool:
+    async def hard_delete_artist(self, user_id: UUID) -> bool:
         stmt = (
             delete(self.model)
             .where(self.model.user_id == user_id)

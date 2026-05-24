@@ -6,16 +6,17 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class TrackBase(BaseModel):
     title: str
+    track_number_in_release: int = Field(ge=1)
     genres: list[str] = Field(default_factory=list)
 
 
 class TrackCreate(TrackBase):
-    album_id: UUID
+    release_id: UUID
 
 
 class TrackRead(TrackBase):
     id: UUID
-    album_id: UUID
+    release_id: UUID
     duration_seconds: int
     path: str
     created_at: datetime | None = None
@@ -26,7 +27,7 @@ class TrackRead(TrackBase):
 
 class TrackUploadAccepted(TrackBase):
     track_id: UUID
-    album_id: UUID
+    release_id: UUID
     status: str = "queued"
 
     model_config = ConfigDict(from_attributes=True)

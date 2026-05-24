@@ -61,7 +61,7 @@ class UserRepository:
     async def get_user_with_profile_by_id(self, user_id: UUID) -> User | None:
         query = (
             select(self.model)
-            .options(selectinload(self.model.profile))
+            .options(selectinload(self.model.artist))
             .where(self.model.id == user_id)
         )
         result = await self._session.execute(query)
@@ -70,7 +70,7 @@ class UserRepository:
     async def get_user_with_profile_by_email(self, email: str) -> User | None:
         query = (
             select(self.model)
-            .options(selectinload(self.model.profile))
+            .options(selectinload(self.model.artist))
             .where(self.model.email == email)
         )
         result = await self._session.execute(query)
