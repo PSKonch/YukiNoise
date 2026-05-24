@@ -1,10 +1,17 @@
 from uuid import UUID
 
-from sqlalchemy import and_, insert, select
+from sqlalchemy import and_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from yn.modules.playlists.model import Playlist, PlaylistTrack
+from yn.modules.tracks.errors import TrackNotFoundError
 from yn.modules.tracks.model import Track
+
+from .errors import (
+    PlaylistAccessDeniedError,
+    PlaylistConflictError,
+)
+from .model import Playlist, PlaylistTrack
 
 
 class PlaylistsRepository:
@@ -20,16 +27,16 @@ class PlaylistsRepository:
         title: str,
         description: str | None = None,
         cover_url: str | None = None,
-        is_public: bool = False,
+        is_private: bool = False,
     ) -> Playlist:
         stmt = (
-            insert(self.model)
+            pg_insert(self.model)
             .values(
                 artist_id=artist_id,
                 title=title,
                 description=description,
                 cover_url=cover_url,
-                is_public=is_public,
+                is_private=is_private,
             )
             .returning(self.model)
         )
@@ -52,7 +59,7 @@ class PlaylistsRepository:
         playlist_result = await self._session.execute(playlist_query)
         owned_playlist_id = playlist_result.scalar_one_or_none()
         if owned_playlist_id is None:
-            return
+            raise PlaylistAccessDeniedError
 
         track_query = select(Track.id).where(
             and_(Track.id == track_id, Track.deleted_at.is_(None))
@@ -60,10 +67,15 @@ class PlaylistsRepository:
         track_result = await self._session.execute(track_query)
         existing_track_id = track_result.scalar_one_or_none()
         if existing_track_id is None:
-            return
+            raise TrackNotFoundError
 
-        stmt = insert(self.auxiliary_model).values(
-            playlist_id=playlist_id,
-            track_id=track_id,
+        stmt = (
+            pg_insert(self.auxiliary_model)
+            .values(playlist_id=playlist_id, track_id=track_id)
+            .on_conflict_do_nothing(index_elements=["playlist_id", "track_id"])
+            .returning(self.auxiliary_model)
         )
-        await self._session.execute(stmt)
+        result = await self._session.execute(stmt)
+        inserted_row = result.scalar_one_or_none()
+        if inserted_row is None:
+            raise PlaylistConflictError

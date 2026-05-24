@@ -3,6 +3,8 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from yn.modules.playlists.enums import PlaylistType
+
 if TYPE_CHECKING:
     from yn.modules.playlists.model import Playlist, PlaylistTrack
 
@@ -15,6 +17,7 @@ class PlaylistDTO:
     description: str | None = None
     cover_url: str | None = None
     is_private: bool = False
+    playlist_type: PlaylistType = PlaylistType.USER
     created_at: datetime | None = None
     updated_at: datetime | None = None
     deleted_at: datetime | None = None
@@ -28,6 +31,7 @@ class PlaylistDTO:
             description=playlist.description,
             cover_url=playlist.cover_url,
             is_private=playlist.is_private,
+            playlist_type=playlist.playlist_type,
             created_at=getattr(playlist, "created_at", None),
             updated_at=getattr(playlist, "updated_at", None),
             deleted_at=getattr(playlist, "deleted_at", None),

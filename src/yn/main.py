@@ -5,6 +5,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from yn.modules.artists.route import router as artists_router
+from yn.modules.playlists.route import router as playlists_router
 from yn.modules.posts.route import router as posts_router
 from yn.modules.releases.route import router as releases_router
 from yn.modules.tracks.route import router as tracks_router
@@ -67,6 +68,7 @@ register_exception_handlers(app)
 
 app.include_router(users_router)
 app.include_router(artists_router)
+app.include_router(playlists_router)
 app.include_router(posts_router)
 app.include_router(releases_router)
 app.include_router(tracks_router)

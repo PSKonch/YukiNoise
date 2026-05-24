@@ -11,6 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from yn.shared.database import Base
 
 if TYPE_CHECKING:
+    from yn.modules.playlists.model import PlaylistTrack
     from yn.modules.releases.model import Release
 
 
@@ -45,6 +46,9 @@ class Track(Base):
 
     # Relationships
     release: Mapped["Release"] = relationship("Release", back_populates="tracks")
+    playlists: Mapped[list["PlaylistTrack"]] = relationship(
+        "PlaylistTrack", back_populates="track"
+    )
 
     __table_args__ = (
         Index("ix_tracks_created_at", "created_at", postgresql_using="btree"),
