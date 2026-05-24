@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class TrackBase(BaseModel):
     title: str
+    track_number_in_release: int = Field(ge=1)
     genres: list[str] = Field(default_factory=list)
 
 

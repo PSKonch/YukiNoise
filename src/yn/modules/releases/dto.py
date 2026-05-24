@@ -16,6 +16,7 @@ class ReleaseDTO:
     title: str
     description: str | None
     cover_path: str | None
+    release_type: str
     status: str
     release_date: datetime | None
     created_at: datetime | None
@@ -28,6 +29,7 @@ class ReleaseDTO:
             id=release.id,
             profile_id=release.profile_id,
             title=release.title,
+            release_type=release.release_type,
             description=getattr(release, "description", None),
             cover_path=getattr(release, "cover_path", None),
             status=getattr(release, "status", "draft"),

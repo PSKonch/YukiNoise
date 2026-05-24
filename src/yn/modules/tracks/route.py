@@ -20,6 +20,7 @@ async def upload_track(
     track_service: Annotated[TrackService, Depends(get_track_service)],
     release_id: Annotated[UUID, Form(...)],
     title: Annotated[str, Form(...)],
+    track_number_in_release: Annotated[int, Form(...)],
     file: Annotated[UploadFile, File(...)],
     genres: Annotated[list[str] | None, Form()] = None,
 ) -> TrackUploadAccepted:
@@ -30,6 +31,7 @@ async def upload_track(
         release_id=release_id,
         current_profile_id=current_user.profile_id,
         title=title,
+        track_number_in_release=track_number_in_release,
         genres=genres or [],
         file=file,
     )

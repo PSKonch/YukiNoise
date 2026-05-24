@@ -25,6 +25,7 @@ class TrackRepository:
         track_id: UUID,
         release_id: UUID,
         title: str,
+        track_number_in_release: int,
         duration_seconds: int,
         path: str,
         genres: list[str],
@@ -35,6 +36,7 @@ class TrackRepository:
                 id=track_id,
                 release_id=release_id,
                 title=title,
+                track_number_in_release=track_number_in_release,
                 duration_seconds=duration_seconds,
                 path=path,
                 genres=genres,
@@ -88,6 +90,19 @@ class TrackRepository:
             and_(
                 self.model.release_id == release_id,
                 func.lower(self.model.title) == title.lower(),
+                self.model.deleted_at.is_(None),
+            )
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_track_by_release_and_number(
+        self, release_id: UUID, track_number_in_release: int
+    ) -> Track | None:
+        stmt = select(self.model).where(
+            and_(
+                self.model.release_id == release_id,
+                self.model.track_number_in_release == track_number_in_release,
                 self.model.deleted_at.is_(None),
             )
         )

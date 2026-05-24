@@ -15,6 +15,7 @@ from yn.modules.tracks.uploader import (
     build_track_storage_key,
     copy_upload_to_shared_tempfile,
     validate_track_filename,
+    validate_track_number_in_release,
 )
 from yn.shared.unit_of_work import UnitOfWork
 from yn.tasks.track_upload import process_track_upload
@@ -31,6 +32,7 @@ class TrackService:
         release_id: UUID,
         current_profile_id: UUID,
         title: str,
+        track_number_in_release: int,
         genres: list[str],
         file: UploadFile,
     ) -> TrackUploadQueuedDTO:
@@ -39,8 +41,13 @@ class TrackService:
             profile_id=current_profile_id,
         )
 
+        validate_track_number_in_release(track_number_in_release)
         validate_track_filename(file.filename)
         await self._ensure_track_title_is_available(release_id=release_id, title=title)
+        await self._ensure_track_number_is_available(
+            release_id=release_id,
+            track_number_in_release=track_number_in_release,
+        )
 
         track_id = uuid4()
         storage_key = build_track_storage_key(
@@ -57,6 +64,7 @@ class TrackService:
                     release_id=release_id,
                     current_profile_id=current_profile_id,
                     title=title,
+                    track_number_in_release=track_number_in_release,
                     genres=genres,
                     storage_key=storage_key,
                     temp_path=temp_path,
@@ -67,7 +75,10 @@ class TrackService:
             raise TrackUploadFailedError from exc
 
         return TrackUploadQueuedDTO(
-            track_id=track_id, release_id=release_id, title=title
+            track_id=track_id,
+            release_id=release_id,
+            title=title,
+            track_number_in_release=track_number_in_release,
         )
 
     async def get_track_by_id(self, track_id: UUID) -> TrackDTO:
@@ -84,6 +95,15 @@ class TrackService:
         self, *, release_id: UUID, title: str
     ) -> None:
         track = await self.uow.tracks.get_track_by_release_and_title(release_id, title)
+        if track is not None:
+            raise TrackConflictError
+
+    async def _ensure_track_number_is_available(
+        self, *, release_id: UUID, track_number_in_release: int
+    ) -> None:
+        track = await self.uow.tracks.get_track_by_release_and_number(
+            release_id, track_number_in_release
+        )
         if track is not None:
             raise TrackConflictError
 

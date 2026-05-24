@@ -15,6 +15,7 @@ from yn.modules.tracks.errors import (
     TrackConflictError,
     TrackFormatError,
     TrackMetadataError,
+    TrackPositionError,
     TrackUploadFailedError,
 )
 from yn.shared.minio import MinioStorage
@@ -24,12 +25,28 @@ from yn.shared.unit_of_work import UnitOfWork
 ALLOWED_TRACK_SUFFIXES = {".mp3", ".wav"}
 
 
+def validate_track_number_in_release(track_number_in_release: int) -> None:
+    if track_number_in_release < 1:
+        raise TrackPositionError
+
+
+def _parse_track_number_in_release(value: object) -> int:
+    if isinstance(value, bool):
+        raise TrackPositionError
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        return int(value)
+    raise TrackPositionError
+
+
 @dataclass(slots=True)
 class TrackUploadPayload:
     track_id: UUID
     release_id: UUID
     current_profile_id: UUID
     title: str
+    track_number_in_release: int
     genres: list[str]
     storage_key: str
     temp_path: str
@@ -40,6 +57,7 @@ class TrackUploadPayload:
             "release_id": str(self.release_id),
             "current_profile_id": str(self.current_profile_id),
             "title": self.title,
+            "track_number_in_release": self.track_number_in_release,
             "genres": self.genres,
             "storage_key": self.storage_key,
             "temp_path": self.temp_path,
@@ -55,11 +73,17 @@ class TrackUploadPayload:
         else:
             genres = []
 
+        track_number_in_release = _parse_track_number_in_release(
+            payload["track_number_in_release"]
+        )
+        validate_track_number_in_release(track_number_in_release)
+
         return cls(
             track_id=UUID(str(payload["track_id"])),
             release_id=UUID(str(payload["release_id"])),
             current_profile_id=UUID(str(payload["current_profile_id"])),
             title=str(payload["title"]),
+            track_number_in_release=track_number_in_release,
             genres=genres,
             storage_key=str(payload["storage_key"]),
             temp_path=str(payload["temp_path"]),
@@ -102,6 +126,8 @@ class TrackUploadProcessor:
         self.release_service = release_service
 
     async def process(self, payload: TrackUploadPayload) -> TrackDTO:
+        validate_track_number_in_release(payload.track_number_in_release)
+
         await self.release_service.get_owned_draft_release_by_id(
             release_id=payload.release_id,
             profile_id=payload.current_profile_id,
@@ -117,6 +143,7 @@ class TrackUploadProcessor:
                 track_id=payload.track_id,
                 release_id=payload.release_id,
                 title=payload.title,
+                track_number_in_release=payload.track_number_in_release,
                 duration_seconds=duration_seconds,
                 path=payload.storage_key,
                 genres=payload.genres,
@@ -126,7 +153,7 @@ class TrackUploadProcessor:
             raise
         except Exception as exc:
             await self._safe_delete_from_storage(payload.storage_key)
-            if isinstance(exc, TrackMetadataError):
+            if isinstance(exc, (TrackMetadataError, TrackPositionError)):
                 raise
             raise TrackUploadFailedError from exc
         finally:

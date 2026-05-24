@@ -5,6 +5,7 @@ from uuid import UUID
 from fastapi import UploadFile
 
 from yn.modules.releases.dto import ReleaseDTO, ReleaseWithTracksAndAuthorDTO
+from yn.modules.releases.enums import ReleaseStatus, ReleaseType
 from yn.modules.releases.errors import (
     ReleaseAccessDeniedError,
     ReleaseCoverUploadFailedError,
@@ -28,12 +29,14 @@ class ReleaseService:
         title: str,
         description: str | None = None,
         cover_path: str | None = None,
+        release_type: ReleaseType = ReleaseType.ALBUM,
     ) -> ReleaseDTO:
         release = await self.uow.releases.create(
             profile_id=profile_id,
             title=title,
             description=description,
             cover_path=cover_path,
+            release_type=release_type,
         )
         return ReleaseDTO.from_orm(release)
 
@@ -52,7 +55,7 @@ class ReleaseService:
             raise ReleaseNotFoundError
         if release.profile_id != profile_id:
             raise ReleaseAccessDeniedError
-        if release.status != "draft":
+        if release.status != ReleaseStatus.DRAFT:
             raise ReleaseNotDraftError
         return ReleaseDTO.from_orm(release)
 
@@ -115,7 +118,7 @@ class ReleaseService:
             raise ReleaseNotFoundError
         if release.profile_id != profile_id:
             raise ReleaseAccessDeniedError
-        if release.status != "draft":
+        if release.status != ReleaseStatus.DRAFT:
             raise ReleaseNotDraftError
         return ReleaseDTO.from_orm(release)
 
@@ -129,7 +132,7 @@ class ReleaseService:
             raise ReleaseNotFoundError
         if release.profile_id != profile_id:
             raise ReleaseAccessDeniedError
-        if release.status != "scheduled":
+        if release.status != ReleaseStatus.SCHEDULED:
             raise ReleaseNotScheduledError
         return ReleaseDTO.from_orm(release)
 

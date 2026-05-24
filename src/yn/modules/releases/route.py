@@ -41,6 +41,7 @@ async def create_release(
         title=payload.title,
         description=payload.description,
         cover_path=payload.cover_path,
+        release_type=payload.release_type,
     )
     return ReleaseRead.model_validate(release, from_attributes=True)
 

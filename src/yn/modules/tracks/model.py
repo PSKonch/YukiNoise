@@ -27,8 +27,16 @@ class Track(Base):
     )
     title: Mapped[str] = mapped_column(nullable=False)
     duration_seconds: Mapped[int] = mapped_column(nullable=False)
+    track_number_in_release: Mapped[int] = mapped_column(nullable=False)
     path: Mapped[str] = mapped_column(nullable=False)
     genres: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+
+    play_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    like_count: Mapped[int] = mapped_column(nullable=False, default=0)
+
+    bitrate: Mapped[int | None] = mapped_column(nullable=True)
+    mime_type: Mapped[str | None] = mapped_column(nullable=True)
+    waveform_path: Mapped[str | None] = mapped_column(nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         nullable=False, server_default=func.now()
@@ -51,6 +59,13 @@ class Track(Base):
             "uq_tracks_release_title_active",
             "release_id",
             func.lower(title),
+            unique=True,
+            postgresql_where=deleted_at.is_(None),
+        ),
+        Index(
+            "uq_tracks_release_track_number_active",
+            "release_id",
+            "track_number_in_release",
             unique=True,
             postgresql_where=deleted_at.is_(None),
         ),

@@ -3,6 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
+from yn.modules.releases.enums import ReleaseType
+
 
 class TrackRead(BaseModel):
     id: UUID
@@ -21,6 +23,7 @@ class ReleaseBase(BaseModel):
     title: str
     description: str | None = None
     cover_path: str | None = None
+    release_type: ReleaseType
 
 
 class ReleaseCreate(ReleaseBase):

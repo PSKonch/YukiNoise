@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
+from yn.modules.releases.enums import ReleaseStatus, ReleaseType
 from yn.modules.releases.errors import ReleaseConflictError
 from yn.modules.releases.model import Release
 
@@ -45,6 +46,7 @@ class ReleaseRepository:
         title: str,
         description: str | None,
         cover_path: str | None = None,
+        release_type: ReleaseType = ReleaseType.ALBUM,
     ) -> Release:
         stmt = (
             insert(self.model)
@@ -53,7 +55,8 @@ class ReleaseRepository:
                 title=title,
                 description=description,
                 cover_path=cover_path,
-                status="draft",
+                status=ReleaseStatus.DRAFT,
+                release_type=release_type,
             )
             .returning(self.model)
         )
@@ -76,7 +79,9 @@ class ReleaseRepository:
                     self.model.id == release_id,
                     self.model.profile_id == profile_id,
                     self.model.deleted_at.is_(None),
-                    self.model.status != "published",
+                    self.model.status.in_(
+                        [ReleaseStatus.DRAFT, ReleaseStatus.SCHEDULED]
+                    ),
                 )
             )
             .values(description=description)
@@ -92,10 +97,10 @@ class ReleaseRepository:
                 and_(
                     self.model.id == release_id,
                     self.model.deleted_at.is_(None),
-                    self.model.status == "scheduled",
+                    self.model.status == ReleaseStatus.SCHEDULED,
                 )
             )
-            .values(status="published")
+            .values(status=ReleaseStatus.PUBLISHED)
             .returning(self.model)
         )
         result = await self._session.execute(stmt)
@@ -110,10 +115,10 @@ class ReleaseRepository:
                 and_(
                     self.model.id == release_id,
                     self.model.deleted_at.is_(None),
-                    self.model.status == "draft",
+                    self.model.status == ReleaseStatus.DRAFT,
                 )
             )
-            .values(status="scheduled", release_date=release_date)
+            .values(status=ReleaseStatus.SCHEDULED, release_date=release_date)
             .returning(self.model)
         )
         result = await self._session.execute(stmt)
@@ -126,10 +131,10 @@ class ReleaseRepository:
                 and_(
                     self.model.id == release_id,
                     self.model.deleted_at.is_(None),
-                    self.model.status == "scheduled",
+                    self.model.status == ReleaseStatus.SCHEDULED,
                 )
             )
-            .values(status="draft", release_date=None)
+            .values(status=ReleaseStatus.DRAFT, release_date=None)
             .returning(self.model)
         )
         result = await self._session.execute(stmt)
@@ -141,7 +146,7 @@ class ReleaseRepository:
             .where(
                 and_(
                     self.model.deleted_at.is_(None),
-                    self.model.status == "scheduled",
+                    self.model.status == ReleaseStatus.SCHEDULED,
                     self.model.release_date <= func.now(),
                 )
             )
