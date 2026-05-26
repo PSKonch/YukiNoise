@@ -17,6 +17,34 @@ from yn.shared.pagination import PaginationParams, get_pagination_params
 router = APIRouter(prefix="/posts", tags=["posts"])
 
 
+# Public read
+@router.get("/search")
+async def search_posts(
+    query: str,
+    post_service: Annotated[PostService, Depends(get_post_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
+) -> list[PostRead]:
+    posts = await post_service.full_text_search_posts(
+        query,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return [PostRead.model_validate(post, from_attributes=True) for post in posts]
+
+
+@router.get("/")
+async def get_posts(
+    post_service: Annotated[PostService, Depends(get_post_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
+) -> list[PostRead]:
+    posts = await post_service.get_posts(
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return [PostRead.model_validate(post, from_attributes=True) for post in posts]
+
+
+# Owner write
 @router.post("/")
 async def create_post(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
@@ -69,29 +97,3 @@ async def delete_post(
     await post_service.delete_post(post_id=post_id, artist_id=current_user.artist_id)
 
     return {"detail": "Post deleted successfully"}
-
-
-@router.get("/search")
-async def search_posts(
-    query: str,
-    post_service: Annotated[PostService, Depends(get_post_service)],
-    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
-) -> list[PostRead]:
-    posts = await post_service.full_text_search_posts(
-        query,
-        limit=pagination.limit,
-        offset=pagination.offset,
-    )
-    return [PostRead.model_validate(post, from_attributes=True) for post in posts]
-
-
-@router.get("/")
-async def get_posts(
-    post_service: Annotated[PostService, Depends(get_post_service)],
-    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
-) -> list[PostRead]:
-    posts = await post_service.get_posts(
-        limit=pagination.limit,
-        offset=pagination.offset,
-    )
-    return [PostRead.model_validate(post, from_attributes=True) for post in posts]

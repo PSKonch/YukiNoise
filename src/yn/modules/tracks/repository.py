@@ -20,35 +20,7 @@ class TrackRepository:
     def __init__(self, session: AsyncSession):
         self._session = session
 
-    async def create(
-        self,
-        track_id: UUID,
-        release_id: UUID,
-        title: str,
-        track_number_in_release: int,
-        duration_seconds: int,
-        path: str,
-        genres: list[str],
-    ) -> Track:
-        stmt = (
-            insert(self.model)
-            .values(
-                id=track_id,
-                release_id=release_id,
-                title=title,
-                track_number_in_release=track_number_in_release,
-                duration_seconds=duration_seconds,
-                path=path,
-                genres=genres,
-            )
-            .returning(self.model)
-        )
-        try:
-            result = await self._session.execute(stmt)
-        except IntegrityError as exc:
-            raise TrackConflictError from exc
-        return result.scalar_one()
-
+    # Public read
     async def get_track_by_id(self, track_id: UUID) -> Track | None:
         stmt = (
             select(self.model)
@@ -83,6 +55,24 @@ class TrackRepository:
         result = await self._session.execute(stmt)
         return result.scalars().all()
 
+    async def trgm_search_by_title(self, search_term: str) -> Sequence[Track]:
+        stmt = (
+            select(self.model)
+            .join(self.model.release)
+            .options(contains_eager(self.model.release))
+            .where(
+                and_(
+                    self.model.deleted_at.is_(None),
+                    self.model.title.op("%")(search_term),
+                    Release.publicly_visible_clause(),
+                )
+            )
+            .order_by(func.similarity(self.model.title, search_term).desc())
+        )
+        result = await self._session.execute(stmt)
+        return result.scalars().all()
+
+    # Owner read
     async def get_track_by_release_and_title(
         self, release_id: UUID, title: str
     ) -> Track | None:
@@ -109,19 +99,32 @@ class TrackRepository:
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def trgm_search_by_title(self, search_term: str) -> Sequence[Track]:
+    # Owner write
+    async def create(
+        self,
+        track_id: UUID,
+        release_id: UUID,
+        title: str,
+        track_number_in_release: int,
+        duration_seconds: int,
+        path: str,
+        genres: list[str],
+    ) -> Track:
         stmt = (
-            select(self.model)
-            .join(self.model.release)
-            .options(contains_eager(self.model.release))
-            .where(
-                and_(
-                    self.model.deleted_at.is_(None),
-                    self.model.title.op("%")(search_term),
-                    Release.publicly_visible_clause(),
-                )
+            insert(self.model)
+            .values(
+                id=track_id,
+                release_id=release_id,
+                title=title,
+                track_number_in_release=track_number_in_release,
+                duration_seconds=duration_seconds,
+                path=path,
+                genres=genres,
             )
-            .order_by(func.similarity(self.model.title, search_term).desc())
+            .returning(self.model)
         )
-        result = await self._session.execute(stmt)
-        return result.scalars().all()
+        try:
+            result = await self._session.execute(stmt)
+        except IntegrityError as exc:
+            raise TrackConflictError from exc
+        return result.scalar_one()

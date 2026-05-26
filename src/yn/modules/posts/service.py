@@ -12,6 +12,26 @@ class PostService:
     def __init__(self, uow: UnitOfWork):
         self.uow = uow
 
+    # Public read
+    async def get_posts(self, *, limit: int, offset: int) -> list[PostDTO]:
+        posts = await self.uow.posts.get_posts(limit=limit, offset=offset)
+        return [PostDTO.from_orm(post) for post in posts]
+
+    async def full_text_search_posts(
+        self,
+        query: str,
+        *,
+        limit: int,
+        offset: int,
+    ) -> list[PostDTO]:
+        posts = await self.uow.posts.full_text_search_posts(
+            query,
+            limit=limit,
+            offset=offset,
+        )
+        return [PostDTO.from_orm(post) for post in posts]
+
+    # Owner write
     async def create_post(
         self,
         artist_id: UUID,
@@ -45,21 +65,3 @@ class PostService:
         if not deleted:
             raise PostNotFoundError
         return deleted
-
-    async def full_text_search_posts(
-        self,
-        query: str,
-        *,
-        limit: int,
-        offset: int,
-    ) -> list[PostDTO]:
-        posts = await self.uow.posts.full_text_search_posts(
-            query,
-            limit=limit,
-            offset=offset,
-        )
-        return [PostDTO.from_orm(post) for post in posts]
-
-    async def get_posts(self, *, limit: int, offset: int) -> list[PostDTO]:
-        posts = await self.uow.posts.get_posts(limit=limit, offset=offset)
-        return [PostDTO.from_orm(post) for post in posts]

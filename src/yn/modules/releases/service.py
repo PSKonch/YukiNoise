@@ -23,6 +23,122 @@ class ReleaseService:
         self.uow = uow
         self.storage = storage
 
+    # Public read
+    async def get_releases(self, *, limit: int, offset: int) -> list[ReleaseDTO]:
+        releases = await self.uow.releases.get_releases(limit=limit, offset=offset)
+        return [ReleaseDTO.from_orm(release) for release in releases]
+
+    async def trgm_search_by_title(
+        self, search_term: str, *, limit: int, offset: int
+    ) -> list[ReleaseDTO]:
+        releases = await self.uow.releases.trgm_search_by_title(
+            search_term,
+            limit=limit,
+            offset=offset,
+        )
+        return [ReleaseDTO.from_orm(release) for release in releases]
+
+    async def get_release_by_id(self, release_id: UUID) -> ReleaseDTO:
+        release = await self.uow.releases.get_public_release_by_id(release_id)
+        if release is None:
+            raise ReleaseNotFoundError
+        return ReleaseDTO.from_orm(release)
+
+    async def get_releases_with_tracks_and_author_profile(
+        self, *, limit: int, offset: int
+    ) -> list[ReleaseWithTracksAndAuthorDTO]:
+        releases = await self.uow.releases.get_releases_with_tracks_and_author_profile(
+            limit=limit,
+            offset=offset,
+        )
+        return [ReleaseWithTracksAndAuthorDTO.from_orm(release) for release in releases]
+
+    async def get_release_with_tracks_and_author_profile_by_id(
+        self, release_id: UUID
+    ) -> ReleaseWithTracksAndAuthorDTO:
+        release = (
+            await self.uow.releases.get_release_with_tracks_and_author_profile_by_id(
+                release_id=release_id
+            )
+        )
+        if release is None:
+            raise ReleaseNotFoundError
+        return ReleaseWithTracksAndAuthorDTO.from_orm(release)
+
+    # Owner read
+    async def get_owned_releases(
+        self,
+        artist_id: UUID,
+        *,
+        limit: int,
+        offset: int,
+    ) -> list[ReleaseDTO]:
+        releases = await self.uow.releases.get_owned_releases_including_deleted(
+            artist_id=artist_id,
+            limit=limit,
+            offset=offset,
+        )
+        return [ReleaseDTO.from_orm(release) for release in releases]
+
+    async def get_owned_release_by_id(
+        self,
+        release_id: UUID,
+        artist_id: UUID,
+    ) -> ReleaseDTO:
+        release = await self.uow.releases.get_owned_release_by_id(
+            release_id=release_id,
+            artist_id=artist_id,
+        )
+        if release is None:
+            raise ReleaseNotFoundError
+        if release.artist_id != artist_id:
+            raise ReleaseAccessDeniedError
+        return ReleaseDTO.from_orm(release)
+
+    async def get_owned_release_by_id_including_deleted(
+        self,
+        release_id: UUID,
+        artist_id: UUID,
+    ) -> ReleaseDTO:
+        release = await self.uow.releases.get_owned_release_by_id_including_deleted(
+            release_id=release_id,
+            artist_id=artist_id,
+        )
+        if release is None:
+            raise ReleaseNotFoundError
+        if release.artist_id != artist_id:
+            raise ReleaseAccessDeniedError
+        return ReleaseDTO.from_orm(release)
+
+    async def get_owned_draft_release_by_id(
+        self,
+        release_id: UUID,
+        artist_id: UUID,
+    ) -> ReleaseDTO:
+        release = await self.uow.releases.get_release_by_id(release_id)
+        if release is None:
+            raise ReleaseNotFoundError
+        if release.artist_id != artist_id:
+            raise ReleaseAccessDeniedError
+        if release.status != ReleaseStatus.DRAFT:
+            raise ReleaseNotDraftError
+        return ReleaseDTO.from_orm(release)
+
+    async def get_owned_scheduled_release_by_id(
+        self,
+        release_id: UUID,
+        artist_id: UUID,
+    ) -> ReleaseDTO:
+        release = await self.uow.releases.get_release_by_id(release_id)
+        if release is None:
+            raise ReleaseNotFoundError
+        if release.artist_id != artist_id:
+            raise ReleaseAccessDeniedError
+        if release.status != ReleaseStatus.SCHEDULED:
+            raise ReleaseNotScheduledError
+        return ReleaseDTO.from_orm(release)
+
+    # Owner write
     async def create_release(
         self,
         artist_id: UUID,
@@ -63,83 +179,6 @@ class ReleaseService:
             raise ReleaseNotFoundError
         return ReleaseDTO.from_orm(updated_release)
 
-    async def get_releases(self, *, limit: int, offset: int) -> list[ReleaseDTO]:
-        releases = await self.uow.releases.get_releases(limit=limit, offset=offset)
-        return [ReleaseDTO.from_orm(release) for release in releases]
-
-    async def get_owned_releases(
-        self,
-        artist_id: UUID,
-        *,
-        limit: int,
-        offset: int,
-    ) -> list[ReleaseDTO]:
-        releases = await self.uow.releases.get_owned_releases(
-            artist_id=artist_id,
-            limit=limit,
-            offset=offset,
-        )
-        return [ReleaseDTO.from_orm(release) for release in releases]
-
-    async def trgm_search_by_title(
-        self, search_term: str, *, limit: int, offset: int
-    ) -> list[ReleaseDTO]:
-        releases = await self.uow.releases.trgm_search_by_title(
-            search_term,
-            limit=limit,
-            offset=offset,
-        )
-        return [ReleaseDTO.from_orm(release) for release in releases]
-
-    async def get_release_by_id(self, release_id: UUID) -> ReleaseDTO:
-        release = await self.uow.releases.get_public_release_by_id(release_id)
-        if release is None:
-            raise ReleaseNotFoundError
-        return ReleaseDTO.from_orm(release)
-
-    async def get_owned_release_by_id(
-        self,
-        release_id: UUID,
-        artist_id: UUID,
-    ) -> ReleaseDTO:
-        release = await self.uow.releases.get_owned_release_by_id(
-            release_id=release_id,
-            artist_id=artist_id,
-        )
-        if release is None:
-            raise ReleaseNotFoundError
-        if release.artist_id != artist_id:
-            raise ReleaseAccessDeniedError
-        return ReleaseDTO.from_orm(release)
-
-    async def get_owned_draft_release_by_id(
-        self,
-        release_id: UUID,
-        artist_id: UUID,
-    ) -> ReleaseDTO:
-        release = await self.uow.releases.get_release_by_id(release_id)
-        if release is None:
-            raise ReleaseNotFoundError
-        if release.artist_id != artist_id:
-            raise ReleaseAccessDeniedError
-        if release.status != ReleaseStatus.DRAFT:
-            raise ReleaseNotDraftError
-        return ReleaseDTO.from_orm(release)
-
-    async def get_owned_scheduled_release_by_id(
-        self,
-        release_id: UUID,
-        artist_id: UUID,
-    ) -> ReleaseDTO:
-        release = await self.uow.releases.get_release_by_id(release_id)
-        if release is None:
-            raise ReleaseNotFoundError
-        if release.artist_id != artist_id:
-            raise ReleaseAccessDeniedError
-        if release.status != ReleaseStatus.SCHEDULED:
-            raise ReleaseNotScheduledError
-        return ReleaseDTO.from_orm(release)
-
     async def schedule_release(
         self,
         *,
@@ -177,27 +216,6 @@ class ReleaseService:
         if updated_release is None:
             raise ReleaseNotFoundError
         return ReleaseDTO.from_orm(updated_release)
-
-    async def get_releases_with_tracks_and_author_profile(
-        self, *, limit: int, offset: int
-    ) -> list[ReleaseWithTracksAndAuthorDTO]:
-        releases = await self.uow.releases.get_releases_with_tracks_and_author_profile(
-            limit=limit,
-            offset=offset,
-        )
-        return [ReleaseWithTracksAndAuthorDTO.from_orm(release) for release in releases]
-
-    async def get_release_with_tracks_and_author_profile_by_id(
-        self, release_id: UUID
-    ) -> ReleaseWithTracksAndAuthorDTO:
-        release = (
-            await self.uow.releases.get_release_with_tracks_and_author_profile_by_id(
-                release_id=release_id
-            )
-        )
-        if release is None:
-            raise ReleaseNotFoundError
-        return ReleaseWithTracksAndAuthorDTO.from_orm(release)
 
     async def upload_release_cover(
         self,

@@ -13,13 +13,10 @@ class ArtistService:
     def __init__(self, uow: UnitOfWork):
         self.uow = uow
 
+    # Public read
     async def get_all_artists(self, *, limit: int, offset: int) -> list[ArtistDTO]:
         artists = await self.uow.artists.get_artists(limit=limit, offset=offset)
         return [ArtistDTO.from_orm(artist) for artist in artists]
-
-    async def get_artist_by_user_id(self, user_id: UUID) -> ArtistDTO | None:
-        artist = await self.uow.artists.get_artist_by_user_id(user_id)
-        return ArtistDTO.from_orm(artist) if artist else None
 
     async def get_artist_by_id(self, artist_id: UUID) -> ArtistDTO | None:
         artist = await self.uow.artists.get_artist_by_id(artist_id)
@@ -61,6 +58,12 @@ class ArtistService:
 
         return [ArtistDTO.from_orm(artist) for artist in artists]
 
+    # Owner read
+    async def get_artist_by_user_id(self, user_id: UUID) -> ArtistDTO | None:
+        artist = await self.uow.artists.get_artist_by_user_id(user_id)
+        return ArtistDTO.from_orm(artist) if artist else None
+
+    # Owner write
     async def create_artist(
         self,
         user_id: UUID,
