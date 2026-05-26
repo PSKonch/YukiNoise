@@ -18,6 +18,13 @@ class ReleaseRepository:
     def __init__(self, session: AsyncSession):
         self._session = session
 
+    async def get_public_release_by_id(self, release_id: UUID) -> Release | None:
+        query = select(self.model).where(
+            and_(self.model.id == release_id, self.model.publicly_visible_clause())
+        )
+        result = await self._session.execute(query)
+        return result.scalar_one_or_none()
+
     async def get_release_by_id(self, release_id: UUID) -> Release | None:
         query = select(self.model).where(
             and_(self.model.id == release_id, self.model.deleted_at.is_(None))
@@ -79,9 +86,7 @@ class ReleaseRepository:
                     self.model.id == release_id,
                     self.model.artist_id == artist_id,
                     self.model.deleted_at.is_(None),
-                    self.model.status.in_(
-                        [ReleaseStatus.DRAFT, ReleaseStatus.SCHEDULED]
-                    ),
+                    self.model.status == ReleaseStatus.DRAFT,
                 )
             )
             .values(description=description)
@@ -90,7 +95,7 @@ class ReleaseRepository:
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def release(self, release_id: UUID) -> Release | None:
+    async def release_release(self, release_id: UUID) -> Release | None:
         stmt = (
             update(self.model)
             .where(

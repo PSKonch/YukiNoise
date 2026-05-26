@@ -58,7 +58,7 @@ class TrackRepository:
                 and_(
                     self.model.id == track_id,
                     self.model.deleted_at.is_(None),
-                    Release.public_visibility_clause(),
+                    Release.publicly_visible_clause(),
                 )
             )
         )
@@ -73,7 +73,7 @@ class TrackRepository:
             .where(
                 and_(
                     self.model.deleted_at.is_(None),
-                    Release.public_visibility_clause(),
+                    Release.publicly_visible_clause(),
                 )
             )
             .order_by(self.model.created_at.desc())
@@ -118,7 +118,7 @@ class TrackRepository:
                 and_(
                     self.model.deleted_at.is_(None),
                     self.model.title.op("%")(search_term),
-                    Release.public_visibility_clause(),
+                    Release.publicly_visible_clause(),
                 )
             )
             .order_by(func.similarity(self.model.title, search_term).desc())

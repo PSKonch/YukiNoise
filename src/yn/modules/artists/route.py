@@ -1,4 +1,5 @@
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
@@ -79,6 +80,17 @@ async def create_artist(
         social_links=payload.social_links,
     )
     return {"detail": "Artist created successfully"}
+
+
+@router.get("/{artist_id}")
+async def get_artist_by_id(
+    artist_id: UUID,
+    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+) -> ArtistRead:
+    artist = await artist_service.get_artist_by_id(artist_id)
+    if artist is None:
+        raise ArtistNotFoundError
+    return ArtistRead.model_validate(artist, from_attributes=True)
 
 
 @router.get("/search")

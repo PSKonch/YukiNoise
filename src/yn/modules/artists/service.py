@@ -3,6 +3,7 @@ from uuid import UUID
 from yn.modules.artists.dto import ArtistDTO
 from yn.modules.artists.errors import (
     ArtistAlreadyExistsError,
+    ArtistConflictError,
     ArtistDisplayedNameTakenError,
 )
 from yn.shared.unit_of_work import UnitOfWork
@@ -67,22 +68,25 @@ class ArtistService:
         bio: str | None = None,
         social_links: dict[str, str] | None = None,
     ) -> ArtistDTO:
-        existing_artist = await self.uow.artists.get_artist_by_user_id(user_id)
-        if existing_artist is not None:
-            raise ArtistAlreadyExistsError
+        try:
+            artist = await self.uow.artists.create(
+                user_id=user_id,
+                displayed_name=displayed_name,
+                bio=bio,
+                social_links=social_links,
+            )
+        except ArtistConflictError as exc:
+            existing_artist = await self.uow.artists.get_artist_by_user_id(user_id)
+            if existing_artist is not None:
+                raise ArtistAlreadyExistsError from exc
 
-        existing_name = await self.uow.artists.get_artist_by_displayed_name(
-            displayed_name
-        )
-        if existing_name is not None:
-            raise ArtistDisplayedNameTakenError
+            existing_name = await self.uow.artists.get_artist_by_displayed_name(
+                displayed_name
+            )
+            if existing_name is not None:
+                raise ArtistDisplayedNameTakenError from exc
+            raise
 
-        artist = await self.uow.artists.create(
-            user_id=user_id,
-            displayed_name=displayed_name,
-            bio=bio,
-            social_links=social_links,
-        )
         return ArtistDTO.from_orm(artist)
 
     async def update_artist(

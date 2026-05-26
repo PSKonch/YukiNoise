@@ -46,18 +46,22 @@ class ReleaseService:
         release_id: UUID,
         description: str,
     ) -> ReleaseDTO:
-        release = await self.uow.releases.update_description(
-            release_id=release_id,
-            artist_id=artist_id,
-            description=description,
-        )
+        release = await self.uow.releases.get_release_by_id(release_id)
         if release is None:
             raise ReleaseNotFoundError
         if release.artist_id != artist_id:
             raise ReleaseAccessDeniedError
         if release.status != ReleaseStatus.DRAFT:
             raise ReleaseNotDraftError
-        return ReleaseDTO.from_orm(release)
+
+        updated_release = await self.uow.releases.update_description(
+            release_id=release_id,
+            artist_id=artist_id,
+            description=description,
+        )
+        if updated_release is None:
+            raise ReleaseNotFoundError
+        return ReleaseDTO.from_orm(updated_release)
 
     async def get_releases(self, *, limit: int, offset: int) -> list[ReleaseDTO]:
         releases = await self.uow.releases.get_releases(limit=limit, offset=offset)
@@ -88,7 +92,7 @@ class ReleaseService:
         return [ReleaseDTO.from_orm(release) for release in releases]
 
     async def get_release_by_id(self, release_id: UUID) -> ReleaseDTO:
-        release = await self.uow.releases.get_release_by_id(release_id)
+        release = await self.uow.releases.get_public_release_by_id(release_id)
         if release is None:
             raise ReleaseNotFoundError
         return ReleaseDTO.from_orm(release)

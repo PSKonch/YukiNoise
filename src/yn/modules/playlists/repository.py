@@ -10,6 +10,7 @@ from yn.modules.tracks.model import Track
 from .errors import (
     PlaylistAccessDeniedError,
     PlaylistConflictError,
+    PlaylistNotFoundError,
 )
 from .model import Playlist, PlaylistTrack
 
@@ -59,6 +60,13 @@ class PlaylistsRepository:
         playlist_result = await self._session.execute(playlist_query)
         owned_playlist_id = playlist_result.scalar_one_or_none()
         if owned_playlist_id is None:
+            playlist_exists_query = select(self.model.id).where(
+                and_(self.model.id == playlist_id, self.model.deleted_at.is_(None))
+            )
+            playlist_exists_result = await self._session.execute(playlist_exists_query)
+            playlist_exists = playlist_exists_result.scalar_one_or_none()
+            if playlist_exists is None:
+                raise PlaylistNotFoundError
             raise PlaylistAccessDeniedError
 
         track_query = select(Track.id).where(
