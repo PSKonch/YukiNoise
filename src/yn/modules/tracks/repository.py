@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Sequence
 from uuid import UUID
 
-from sqlalchemy import and_, func, insert, select
+from sqlalchemy import and_, func, insert, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager
@@ -98,6 +98,30 @@ class TrackRepository:
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def get_conflicting_track_for_release(
+        self,
+        release_id: UUID,
+        title: str,
+        track_number_in_release: int,
+    ) -> Track | None:
+        normalized_title = title.lower()
+        stmt = (
+            select(self.model)
+            .where(
+                and_(
+                    self.model.release_id == release_id,
+                    self.model.deleted_at.is_(None),
+                    or_(
+                        func.lower(self.model.title) == normalized_title,
+                        self.model.track_number_in_release == track_number_in_release,
+                    ),
+                )
+            )
+            .limit(1)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalars().first()
 
     # Owner write
     async def create(

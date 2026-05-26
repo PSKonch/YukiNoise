@@ -55,9 +55,9 @@ class TrackService:
 
         validate_track_number_in_release(track_number_in_release)
         validate_track_filename(file.filename)
-        await self._ensure_track_title_is_available(release_id=release_id, title=title)
-        await self._ensure_track_number_is_available(
+        await self._ensure_track_is_available(
             release_id=release_id,
+            title=title,
             track_number_in_release=track_number_in_release,
         )
 
@@ -94,18 +94,17 @@ class TrackService:
         )
 
     # Validation helpers
-    async def _ensure_track_title_is_available(
-        self, *, release_id: UUID, title: str
+    async def _ensure_track_is_available(
+        self,
+        *,
+        release_id: UUID,
+        title: str,
+        track_number_in_release: int,
     ) -> None:
-        track = await self.uow.tracks.get_track_by_release_and_title(release_id, title)
-        if track is not None:
-            raise TrackConflictError
-
-    async def _ensure_track_number_is_available(
-        self, *, release_id: UUID, track_number_in_release: int
-    ) -> None:
-        track = await self.uow.tracks.get_track_by_release_and_number(
-            release_id, track_number_in_release
+        track = await self.uow.tracks.get_conflicting_track_for_release(
+            release_id=release_id,
+            title=title,
+            track_number_in_release=track_number_in_release,
         )
         if track is not None:
             raise TrackConflictError

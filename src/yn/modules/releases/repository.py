@@ -252,13 +252,14 @@ class ReleaseRepository:
         return result.scalar_one_or_none()
 
     async def schedule_release(
-        self, release_id: UUID, release_date: datetime
+        self, release_id: UUID, artist_id: UUID, release_date: datetime
     ) -> Release | None:
         stmt = (
             update(self.model)
             .where(
                 and_(
                     self.model.id == release_id,
+                    self.model.artist_id == artist_id,
                     self.model.deleted_at.is_(None),
                     self.model.status == ReleaseStatus.DRAFT,
                 )
@@ -269,12 +270,15 @@ class ReleaseRepository:
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def unschedule_release(self, release_id: UUID) -> Release | None:
+    async def unschedule_release(
+        self, release_id: UUID, artist_id: UUID
+    ) -> Release | None:
         stmt = (
             update(self.model)
             .where(
                 and_(
                     self.model.id == release_id,
+                    self.model.artist_id == artist_id,
                     self.model.deleted_at.is_(None),
                     self.model.status == ReleaseStatus.SCHEDULED,
                 )
@@ -298,4 +302,20 @@ class ReleaseRepository:
             .order_by(self.model.release_date.asc(), self.model.created_at.asc())
         )
         result = await self._session.execute(query)
+        return result.scalars().all()
+
+    async def publish_due_releases(self) -> Sequence[UUID]:
+        stmt = (
+            update(self.model)
+            .where(
+                and_(
+                    self.model.deleted_at.is_(None),
+                    self.model.status == ReleaseStatus.SCHEDULED,
+                    self.model.release_date <= func.now(),
+                )
+            )
+            .values(status=ReleaseStatus.PUBLISHED)
+            .returning(self.model.id)
+        )
+        result = await self._session.execute(stmt)
         return result.scalars().all()

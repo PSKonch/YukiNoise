@@ -79,14 +79,13 @@ class ArtistService:
                 social_links=social_links,
             )
         except ArtistConflictError as exc:
-            existing_artist = await self.uow.artists.get_artist_by_user_id(user_id)
-            if existing_artist is not None:
-                raise ArtistAlreadyExistsError from exc
-
-            existing_name = await self.uow.artists.get_artist_by_displayed_name(
-                displayed_name
+            user_taken, name_taken = await self.uow.artists.get_artist_conflict_flags(
+                user_id=user_id,
+                displayed_name=displayed_name,
             )
-            if existing_name is not None:
+            if user_taken:
+                raise ArtistAlreadyExistsError from exc
+            if name_taken:
                 raise ArtistDisplayedNameTakenError from exc
             raise
 

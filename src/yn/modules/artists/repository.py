@@ -38,6 +38,26 @@ class ArtistRepository:
         result = await self._session.execute(query)
         return result.scalar_one_or_none()
 
+    async def get_artist_conflict_flags(
+        self, user_id: UUID, displayed_name: str
+    ) -> tuple[bool, bool]:
+        query = select(
+            func.coalesce(func.bool_or(self.model.user_id == user_id), False).label(
+                "user_taken"
+            ),
+            func.coalesce(
+                func.bool_or(self.model.displayed_name == displayed_name), False
+            ).label("name_taken"),
+        ).where(
+            or_(
+                self.model.user_id == user_id,
+                self.model.displayed_name == displayed_name,
+            )
+        )
+        result = await self._session.execute(query)
+        row = result.one()
+        return bool(row.user_taken), bool(row.name_taken)
+
     async def full_text_search_artists(
         self, search: str, limit: int, offset: int
     ) -> Sequence[Artist]:
