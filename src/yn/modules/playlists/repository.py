@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Any, Sequence
 from uuid import UUID
 
 from sqlalchemy import and_, delete, func, literal, select, update
@@ -287,7 +287,7 @@ class PlaylistsRepository:
         cover_url: str | None = None,
         is_private: bool | None = None,
     ) -> Playlist | None:
-        values: dict[str, object] = {}
+        values: dict[str, Any] = {}
         if title is not None:
             values["title"] = title
         if description is not None:

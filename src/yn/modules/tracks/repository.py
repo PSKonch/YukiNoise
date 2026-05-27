@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 from uuid import UUID
 
 from sqlalchemy import and_, func, insert, or_, select, update
@@ -223,7 +223,7 @@ class TrackRepository:
         track_number_in_release: int | None = None,
         genres: list[str] | None = None,
     ) -> Track | None:
-        values: dict[str, object] = {}
+        values: dict[str, Any] = {}
         if title is not None:
             values["title"] = title
         if track_number_in_release is not None:

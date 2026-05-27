@@ -52,7 +52,7 @@ async def search_artists(
     ]
 
 
-@router.get("/{artist_id}")
+@router.get("/{artist_id:uuid}")
 async def get_artist_by_id(
     artist_id: UUID,
     artist_service: Annotated[ArtistService, Depends(get_artist_service)],
@@ -63,7 +63,7 @@ async def get_artist_by_id(
     return ArtistRead.model_validate(artist, from_attributes=True)
 
 
-@router.get("/{artist_id}/releases")
+@router.get("/{artist_id:uuid}/releases")
 async def get_artist_releases(
     artist_id: UUID,
     artist_service: Annotated[ArtistService, Depends(get_artist_service)],
@@ -84,7 +84,7 @@ async def get_artist_releases(
     ]
 
 
-@router.get("/{artist_id}/tracks")
+@router.get("/{artist_id:uuid}/tracks")
 async def get_artist_tracks(
     artist_id: UUID,
     artist_service: Annotated[ArtistService, Depends(get_artist_service)],
@@ -102,7 +102,7 @@ async def get_artist_tracks(
     return [TrackRead.model_validate(track, from_attributes=True) for track in tracks]
 
 
-@router.get("/{artist_id}/posts")
+@router.get("/{artist_id:uuid}/posts")
 async def get_artist_posts(
     artist_id: UUID,
     artist_service: Annotated[ArtistService, Depends(get_artist_service)],
@@ -120,7 +120,7 @@ async def get_artist_posts(
     return [PostRead.model_validate(post, from_attributes=True) for post in posts]
 
 
-@router.get("/{artist_id}/playlists")
+@router.get("/{artist_id:uuid}/playlists")
 async def get_artist_playlists(
     artist_id: UUID,
     artist_service: Annotated[ArtistService, Depends(get_artist_service)],

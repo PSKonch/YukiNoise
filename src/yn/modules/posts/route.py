@@ -44,7 +44,7 @@ async def get_posts(
     return [PostRead.model_validate(post, from_attributes=True) for post in posts]
 
 
-@router.get("/{post_id}")
+@router.get("/{post_id:uuid}")
 async def get_post_by_id(
     post_service: Annotated[PostService, Depends(get_post_service)],
     post_id: UUID,
@@ -89,7 +89,7 @@ async def get_owned_posts(
     return [PostRead.model_validate(post, from_attributes=True) for post in posts]
 
 
-@router.get("/me/{post_id}")
+@router.get("/me/{post_id:uuid}")
 async def get_owned_post_by_id(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     post_service: Annotated[PostService, Depends(get_post_service)],
@@ -105,7 +105,7 @@ async def get_owned_post_by_id(
     return PostRead.model_validate(post, from_attributes=True)
 
 
-@router.put("/{post_id}")
+@router.put("/{post_id:uuid}")
 async def update_post(
     post_id: UUID,
     current_user: Annotated[UserDTO, Depends(get_current_user)],
@@ -128,7 +128,7 @@ async def update_post(
     return {"detail": "Post updated successfully"}
 
 
-@router.delete("/{post_id}")
+@router.delete("/{post_id:uuid}")
 async def delete_post(
     post_id: UUID,
     current_user: Annotated[UserDTO, Depends(get_current_user)],

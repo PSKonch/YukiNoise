@@ -28,7 +28,7 @@ async def get_tracks(
     return [TrackRead.model_validate(track, from_attributes=True) for track in tracks]
 
 
-@router.get("/{track_id}")
+@router.get("/{track_id:uuid}")
 async def get_track_by_id(
     track_service: Annotated[TrackService, Depends(get_track_service)],
     track_id: UUID,
@@ -55,7 +55,7 @@ async def get_owned_tracks(
     return [TrackRead.model_validate(track, from_attributes=True) for track in tracks]
 
 
-@router.get("/me/{track_id}")
+@router.get("/me/{track_id:uuid}")
 async def get_owned_track_by_id(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     track_service: Annotated[TrackService, Depends(get_track_service)],
@@ -96,7 +96,7 @@ async def upload_track(
     return TrackUploadAccepted.model_validate(track, from_attributes=True)
 
 
-@router.patch("/{track_id}")
+@router.patch("/{track_id:uuid}")
 async def update_track(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     track_service: Annotated[TrackService, Depends(get_track_service)],
@@ -123,7 +123,7 @@ async def update_track(
     return TrackRead.model_validate(track, from_attributes=True)
 
 
-@router.delete("/{track_id}")
+@router.delete("/{track_id:uuid}")
 async def delete_track(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     track_service: Annotated[TrackService, Depends(get_track_service)],

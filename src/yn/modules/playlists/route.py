@@ -36,7 +36,7 @@ async def get_playlists(
     ]
 
 
-@router.get("/{playlist_id}")
+@router.get("/{playlist_id:uuid}")
 async def get_playlist_by_id(
     playlist_service: Annotated[PlaylistService, Depends(get_playlist_service)],
     playlist_id: UUID,
@@ -45,7 +45,7 @@ async def get_playlist_by_id(
     return PlaylistRead.model_validate(playlist, from_attributes=True)
 
 
-@router.get("/{playlist_id}/tracks")
+@router.get("/{playlist_id:uuid}/tracks")
 async def get_playlist_tracks(
     playlist_service: Annotated[PlaylistService, Depends(get_playlist_service)],
     playlist_id: UUID,
@@ -83,7 +83,7 @@ async def get_owned_playlists(
     ]
 
 
-@router.get("/me/{playlist_id}")
+@router.get("/me/{playlist_id:uuid}")
 async def get_owned_playlist_by_id(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     playlist_service: Annotated[PlaylistService, Depends(get_playlist_service)],
@@ -99,7 +99,7 @@ async def get_owned_playlist_by_id(
     return PlaylistRead.model_validate(playlist, from_attributes=True)
 
 
-@router.get("/me/{playlist_id}/tracks")
+@router.get("/me/{playlist_id:uuid}/tracks")
 async def get_owned_playlist_tracks(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     playlist_service: Annotated[PlaylistService, Depends(get_playlist_service)],
@@ -141,7 +141,7 @@ async def create_playlist(
     return PlaylistRead.model_validate(playlist, from_attributes=True)
 
 
-@router.patch("/{playlist_id}")
+@router.patch("/{playlist_id:uuid}")
 async def update_playlist(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     playlist_service: Annotated[PlaylistService, Depends(get_playlist_service)],
@@ -170,7 +170,7 @@ async def update_playlist(
     return PlaylistRead.model_validate(playlist, from_attributes=True)
 
 
-@router.delete("/{playlist_id}")
+@router.delete("/{playlist_id:uuid}")
 async def delete_playlist(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     playlist_service: Annotated[PlaylistService, Depends(get_playlist_service)],
@@ -187,7 +187,7 @@ async def delete_playlist(
     return {"detail": "Playlist deleted successfully"}
 
 
-@router.post("/{playlist_id}/tracks/{track_id}")
+@router.post("/{playlist_id:uuid}/tracks/{track_id:uuid}")
 async def add_track_to_playlist(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     playlist_service: Annotated[PlaylistService, Depends(get_playlist_service)],
@@ -206,7 +206,7 @@ async def add_track_to_playlist(
     return {"detail": "Track added to playlist successfully"}
 
 
-@router.delete("/{playlist_id}/tracks/{track_id}")
+@router.delete("/{playlist_id:uuid}/tracks/{track_id:uuid}")
 async def remove_track_from_playlist(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     playlist_service: Annotated[PlaylistService, Depends(get_playlist_service)],
