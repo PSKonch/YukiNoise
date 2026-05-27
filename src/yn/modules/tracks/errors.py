@@ -35,3 +35,9 @@ class TrackNotFoundError(AppError):
     status_code = 404
     code = "track_not_found"
     detail = "Track not found"
+
+
+class EmptyTrackUpdateError(AppError):
+    status_code = 400
+    code = "empty_track_update"
+    detail = "At least one field must be provided"

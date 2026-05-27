@@ -55,6 +55,24 @@ class ReleaseRepository:
         result = await self._session.execute(query)
         return result.scalars().all()
 
+    async def get_public_releases_by_artist_id(
+        self, artist_id: UUID, limit: int, offset: int
+    ) -> Sequence[Release]:
+        query = (
+            select(self.model)
+            .where(
+                and_(
+                    self.model.artist_id == artist_id,
+                    self.model.publicly_visible_clause(),
+                )
+            )
+            .order_by(self.model.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(query)
+        return result.scalars().all()
+
     async def get_releases_with_tracks_and_author_profile(
         self, limit: int, offset: int
     ) -> Sequence[Release]:

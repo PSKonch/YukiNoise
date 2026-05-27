@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from yn.modules.artists.errors import ArtistNotFoundError
 from yn.modules.tracks.deps import get_track_service
-from yn.modules.tracks.schemas import TrackRead, TrackUploadAccepted
+from yn.modules.tracks.errors import EmptyTrackUpdateError
+from yn.modules.tracks.schemas import TrackRead, TrackUpdate, TrackUploadAccepted
 from yn.modules.tracks.service import TrackService
 from yn.modules.users.auth import get_current_user
 from yn.modules.users.dto import UserDTO
@@ -27,12 +28,46 @@ async def get_tracks(
     return [TrackRead.model_validate(track, from_attributes=True) for track in tracks]
 
 
-@router.get("/{track_id}")
+@router.get("/{track_id:uuid}")
 async def get_track_by_id(
     track_service: Annotated[TrackService, Depends(get_track_service)],
     track_id: UUID,
 ) -> TrackRead:
     track = await track_service.get_track_by_id(track_id)
+    return TrackRead.model_validate(track, from_attributes=True)
+
+
+# Owner read
+@router.get("/me")
+async def get_owned_tracks(
+    current_user: Annotated[UserDTO, Depends(get_current_user)],
+    track_service: Annotated[TrackService, Depends(get_track_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
+) -> list[TrackRead]:
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
+
+    tracks = await track_service.get_owned_tracks_by_artist_id(
+        artist_id=current_user.artist_id,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return [TrackRead.model_validate(track, from_attributes=True) for track in tracks]
+
+
+@router.get("/me/{track_id:uuid}")
+async def get_owned_track_by_id(
+    current_user: Annotated[UserDTO, Depends(get_current_user)],
+    track_service: Annotated[TrackService, Depends(get_track_service)],
+    track_id: UUID,
+) -> TrackRead:
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
+
+    track = await track_service.get_owned_track_by_id(
+        track_id=track_id,
+        artist_id=current_user.artist_id,
+    )
     return TrackRead.model_validate(track, from_attributes=True)
 
 
@@ -59,3 +94,47 @@ async def upload_track(
         file=file,
     )
     return TrackUploadAccepted.model_validate(track, from_attributes=True)
+
+
+@router.patch("/{track_id:uuid}")
+async def update_track(
+    current_user: Annotated[UserDTO, Depends(get_current_user)],
+    track_service: Annotated[TrackService, Depends(get_track_service)],
+    track_id: UUID,
+    payload: TrackUpdate,
+) -> TrackRead:
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
+
+    if (
+        payload.title is None
+        and payload.track_number_in_release is None
+        and payload.genres is None
+    ):
+        raise EmptyTrackUpdateError
+
+    track = await track_service.update_track(
+        track_id=track_id,
+        artist_id=current_user.artist_id,
+        title=payload.title,
+        track_number_in_release=payload.track_number_in_release,
+        genres=payload.genres,
+    )
+    return TrackRead.model_validate(track, from_attributes=True)
+
+
+@router.delete("/{track_id:uuid}")
+async def delete_track(
+    current_user: Annotated[UserDTO, Depends(get_current_user)],
+    track_service: Annotated[TrackService, Depends(get_track_service)],
+    track_id: UUID,
+) -> dict[str, str]:
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
+
+    await track_service.delete_track(
+        track_id=track_id,
+        artist_id=current_user.artist_id,
+    )
+
+    return {"detail": "Track deleted successfully"}

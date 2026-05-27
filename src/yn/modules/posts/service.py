@@ -31,6 +31,41 @@ class PostService:
         )
         return [PostDTO.from_orm(post) for post in posts]
 
+    async def get_post_by_id(self, post_id: UUID) -> PostDTO:
+        post = await self.uow.posts.get_post_by_id(post_id)
+        if post is None:
+            raise PostNotFoundError
+        return PostDTO.from_orm(post)
+
+    async def get_posts_by_artist_id(
+        self, artist_id: UUID, *, limit: int, offset: int
+    ) -> list[PostDTO]:
+        posts = await self.uow.posts.get_posts_by_artist_id(
+            artist_id,
+            limit=limit,
+            offset=offset,
+        )
+        return [PostDTO.from_orm(post) for post in posts]
+
+    # Owner read
+    async def get_owned_posts(
+        self, artist_id: UUID, *, limit: int, offset: int
+    ) -> list[PostDTO]:
+        return await self.get_posts_by_artist_id(
+            artist_id,
+            limit=limit,
+            offset=offset,
+        )
+
+    async def get_owned_post_by_id(self, post_id: UUID, artist_id: UUID) -> PostDTO:
+        post = await self.uow.posts.get_post_by_id_for_artist(
+            post_id=post_id,
+            artist_id=artist_id,
+        )
+        if post is None:
+            raise PostNotFoundError
+        return PostDTO.from_orm(post)
+
     # Owner write
     async def create_post(
         self,

@@ -75,7 +75,7 @@ async def get_releases_with_tracks_and_author_profile(
     ]
 
 
-@router.get("/{release_id}")
+@router.get("/{release_id:uuid}")
 async def get_release_by_id(
     release_service: Annotated[ReleaseService, Depends(get_release_service)],
     release_id: UUID,
@@ -84,7 +84,7 @@ async def get_release_by_id(
     return ReleaseRead.model_validate(release, from_attributes=True)
 
 
-@router.get("/{release_id}/with-tracks-and-author")
+@router.get("/{release_id:uuid}/with-tracks-and-author")
 async def get_release_with_tracks_and_author_profile_by_id(
     release_service: Annotated[ReleaseService, Depends(get_release_service)],
     release_id: UUID,
@@ -116,7 +116,7 @@ async def get_owned_releases(
     ]
 
 
-@router.get("/me/{release_id}")
+@router.get("/me/{release_id:uuid}")
 async def get_owned_release_by_id(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     release_service: Annotated[ReleaseService, Depends(get_release_service)],
@@ -152,7 +152,7 @@ async def create_release(
     return ReleaseRead.model_validate(release, from_attributes=True)
 
 
-@router.patch("/{release_id}/description")
+@router.patch("/{release_id:uuid}/description")
 async def update_release_description(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     release_service: Annotated[ReleaseService, Depends(get_release_service)],
@@ -170,7 +170,7 @@ async def update_release_description(
     return ReleaseRead.model_validate(release, from_attributes=True)
 
 
-@router.patch("/{release_id}/cover")
+@router.patch("/{release_id:uuid}/cover")
 async def upload_release_cover(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     release_service: Annotated[ReleaseService, Depends(get_release_service)],
@@ -212,7 +212,7 @@ async def upload_release_cover(
     return ReleaseCoverUploadAccepted(release_id=release_id)
 
 
-@router.patch("/{release_id}/release")
+@router.patch("/{release_id:uuid}/release")
 async def schedule_release(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     release_service: Annotated[ReleaseService, Depends(get_release_service)],
@@ -230,7 +230,7 @@ async def schedule_release(
     return ReleaseRead.model_validate(release, from_attributes=True)
 
 
-@router.delete("/{release_id}/release")
+@router.delete("/{release_id:uuid}/release")
 async def cancel_release(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     release_service: Annotated[ReleaseService, Depends(get_release_service)],
