@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from yn.modules.playlists.enums import PlaylistType
+from yn.modules.tracks.dto import TrackDTO
 
 if TYPE_CHECKING:
     from yn.modules.playlists.model import Playlist, PlaylistTrack
@@ -43,11 +44,14 @@ class PlaylistTrackDTO:
     playlist_id: UUID
     track_id: UUID
     added_at: datetime | None = None
+    track: TrackDTO | None = None
 
     @classmethod
     def from_orm(cls, playlist_track: "PlaylistTrack") -> "PlaylistTrackDTO":
+        track = playlist_track.__dict__.get("track")
         return cls(
             playlist_id=playlist_track.playlist_id,
             track_id=playlist_track.track_id,
             added_at=getattr(playlist_track, "added_at", None),
+            track=TrackDTO.from_orm(track) if track else None,
         )

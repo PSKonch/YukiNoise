@@ -1,8 +1,10 @@
+from typing import Sequence
 from uuid import UUID
 
-from sqlalchemy import and_, func, literal, select
+from sqlalchemy import and_, delete, func, literal, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import contains_eager, selectinload
 
 from yn.modules.playlists.errors import (
     PlaylistAccessDeniedError,
@@ -10,6 +12,7 @@ from yn.modules.playlists.errors import (
     PlaylistNotFoundError,
 )
 from yn.modules.playlists.model import Playlist, PlaylistTrack
+from yn.modules.releases.model import Release
 from yn.modules.tracks.errors import TrackNotFoundError
 from yn.modules.tracks.model import Track
 
@@ -21,6 +24,167 @@ class PlaylistsRepository:
     def __init__(self, session: AsyncSession):
         self._session = session
 
+    # Public read
+    async def get_public_playlist_by_id(self, playlist_id: UUID) -> Playlist | None:
+        stmt = select(self.model).where(
+            and_(
+                self.model.id == playlist_id,
+                self.model.is_private.is_(False),
+                self.model.deleted_at.is_(None),
+            )
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_public_playlists_by_artist_id(  # it's about other artist's playlists, so we need to filter out private ones
+        self, artist_id: UUID, *, limit: int, offset: int
+    ) -> Sequence[Playlist]:
+        stmt = (
+            select(self.model)
+            .where(
+                and_(
+                    self.model.artist_id == artist_id,
+                    self.model.is_private.is_(False),
+                    self.model.deleted_at.is_(None),
+                )
+            )
+            .order_by(self.model.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalars().all()
+
+    async def get_playlist_with_tracks_by_id(
+        self, playlist_id: UUID
+    ) -> Playlist | None:
+        stmt = (
+            select(self.model)
+            .options(
+                selectinload(self.model.tracks).selectinload(self.auxiliary_model.track)
+            )
+            .where(
+                and_(
+                    self.model.id == playlist_id,
+                    self.model.is_private.is_(False),
+                    self.model.deleted_at.is_(None),
+                )
+            )
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_playlists(self, *, limit: int, offset: int) -> Sequence[Playlist]:
+        stmt = (
+            select(self.model)
+            .where(
+                and_(
+                    self.model.is_private.is_(False),
+                    self.model.deleted_at.is_(None),
+                )
+            )
+            .order_by(self.model.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalars().all()
+
+    async def get_public_playlist_tracks(
+        self, playlist_id: UUID, *, limit: int, offset: int
+    ) -> Sequence[PlaylistTrack]:
+        stmt = (
+            select(self.auxiliary_model)
+            .join(self.auxiliary_model.playlist)
+            .join(self.auxiliary_model.track)
+            .join(Track.release)
+            .options(contains_eager(self.auxiliary_model.track))
+            .where(
+                and_(
+                    self.auxiliary_model.playlist_id == playlist_id,
+                    self.model.is_private.is_(False),
+                    self.model.deleted_at.is_(None),
+                    Track.deleted_at.is_(None),
+                    Release.publicly_visible_clause(),
+                )
+            )
+            .order_by(self.auxiliary_model.added_at.asc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalars().all()
+
+    # Owner read
+    async def get_playlist_by_id_including_deleted(
+        self, playlist_id: UUID
+    ) -> Playlist | None:
+        stmt = select(self.model).where(self.model.id == playlist_id)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_playlist_by_id(self, playlist_id: UUID) -> Playlist | None:
+        stmt = select(self.model).where(
+            and_(
+                self.model.id == playlist_id,
+                self.model.deleted_at.is_(None),
+            )
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_playlists_by_artist_id(  # it's about own playlists, so we can include private ones
+        self, artist_id: UUID, *, limit: int, offset: int
+    ) -> Sequence[Playlist]:
+        stmt = (
+            select(self.model)
+            .where(
+                and_(
+                    self.model.artist_id == artist_id,
+                    self.model.deleted_at.is_(None),
+                )
+            )
+            .order_by(self.model.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalars().all()
+
+    async def get_playlists_by_artist_id_including_deleted(
+        self, artist_id: UUID, *, limit: int, offset: int
+    ) -> Sequence[Playlist]:
+        stmt = (
+            select(self.model)
+            .where(self.model.artist_id == artist_id)
+            .order_by(self.model.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalars().all()
+
+    async def get_playlist_tracks(
+        self, playlist_id: UUID, *, limit: int, offset: int
+    ) -> Sequence[PlaylistTrack]:
+        stmt = (
+            select(self.auxiliary_model)
+            .join(self.auxiliary_model.track)
+            .options(contains_eager(self.auxiliary_model.track))
+            .where(
+                and_(
+                    self.auxiliary_model.playlist_id == playlist_id,
+                    Track.deleted_at.is_(None),
+                )
+            )
+            .order_by(self.auxiliary_model.added_at.asc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalars().all()
+
+    # Owner write
     async def create(
         self,
         artist_id: UUID,
@@ -92,3 +256,86 @@ class PlaylistsRepository:
             raise TrackNotFoundError
         if status_row.inserted_count == 0:
             raise PlaylistConflictError
+
+    async def remove_track(self, playlist_id: UUID, track_id: UUID) -> bool:
+        track_stmt = select(Track.id).where(
+            and_(Track.id == track_id, Track.deleted_at.is_(None))
+        )
+        track_result = await self._session.execute(track_stmt)
+        if track_result.scalar_one_or_none() is None:
+            raise TrackNotFoundError
+
+        stmt = (
+            delete(self.auxiliary_model)
+            .where(
+                and_(
+                    self.auxiliary_model.playlist_id == playlist_id,
+                    self.auxiliary_model.track_id == track_id,
+                )
+            )
+            .returning(literal(1).label("deleted"))
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none() is not None
+
+    async def update(
+        self,
+        playlist_id: UUID,
+        artist_id: UUID,
+        title: str | None = None,
+        description: str | None = None,
+        cover_url: str | None = None,
+        is_private: bool | None = None,
+    ) -> Playlist | None:
+        values: dict[str, object] = {}
+        if title is not None:
+            values["title"] = title
+        if description is not None:
+            values["description"] = description
+        if cover_url is not None:
+            values["cover_url"] = cover_url
+        if is_private is not None:
+            values["is_private"] = is_private
+
+        if not values:
+            return None
+
+        stmt = (
+            update(self.model)
+            .where(
+                and_(
+                    self.model.id == playlist_id,
+                    self.model.artist_id == artist_id,
+                    self.model.deleted_at.is_(None),
+                )
+            )
+            .values(**values)
+            .returning(self.model)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def soft_delete(self, playlist_id: UUID, artist_id: UUID) -> bool:
+        stmt = (
+            update(self.model)
+            .where(
+                and_(
+                    self.model.id == playlist_id,
+                    self.model.artist_id == artist_id,
+                    self.model.deleted_at.is_(None),
+                )
+            )
+            .values(deleted_at=func.now())
+            .returning(self.model.id)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none() is not None
+
+    async def hard_delete(self, playlist_id: UUID) -> bool:
+        stmt = (
+            delete(self.model)
+            .where(self.model.id == playlist_id)
+            .returning(self.model.id)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none() is not None

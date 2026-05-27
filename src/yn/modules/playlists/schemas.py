@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 from yn.modules.playlists.enums import PlaylistType
+from yn.modules.tracks.schemas import TrackRead
 
 
 class PlaylistCreate(BaseModel):
@@ -24,9 +25,17 @@ class PlaylistRead(PlaylistCreate):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PlaylistUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    cover_url: str | None = None
+    is_private: bool | None = None
+
+
 class PlaylistTrackRead(BaseModel):
     playlist_id: UUID
     track_id: UUID
     added_at: datetime | None = None
+    track: TrackRead | None = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -84,7 +84,7 @@ async def get_release_by_id(
     return ReleaseRead.model_validate(release, from_attributes=True)
 
 
-@router.get("/{release_id}/with-tracks-and-author")
+@router.get("/{release_id}/with-tracks-and-author/")
 async def get_release_with_tracks_and_author_profile_by_id(
     release_service: Annotated[ReleaseService, Depends(get_release_service)],
     release_id: UUID,
@@ -96,7 +96,7 @@ async def get_release_with_tracks_and_author_profile_by_id(
 
 
 # Owner read
-@router.get("/me")
+@router.get("/me/")
 async def get_owned_releases(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     release_service: Annotated[ReleaseService, Depends(get_release_service)],
