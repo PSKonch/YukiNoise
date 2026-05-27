@@ -17,6 +17,84 @@ class PostRepository:
     def __init__(self, session: AsyncSession):
         self._session = session
 
+    # Public read
+    async def get_posts(self, limit: int, offset: int) -> Sequence[Post]:
+        query = (
+            select(self.model)
+            .options(
+                selectinload(self.model.artist).load_only(
+                    Artist.id, Artist.displayed_name
+                )
+            )
+            .where(self.model.deleted_at.is_(None))
+            .order_by(self.model.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(query)
+        return result.scalars().all()
+
+    async def full_text_search_posts(
+        self, search: str, limit: int, offset: int
+    ) -> Sequence[Post]:
+        """
+        Search posts by title and content using full-text search
+        """
+        ts_query_en = func.websearch_to_tsquery("english", search)
+        ts_query_ru = func.websearch_to_tsquery("russian", search)
+
+        rank = func.ts_rank_cd(self.model.search_vector, ts_query_en) + func.ts_rank_cd(
+            self.model.search_vector, ts_query_ru
+        )
+
+        query = (
+            select(self.model)
+            .options(
+                selectinload(self.model.artist).load_only(
+                    Artist.id, Artist.displayed_name
+                )
+            )
+            .where(
+                and_(
+                    or_(
+                        self.model.search_vector.op("@@")(ts_query_en),
+                        self.model.search_vector.op("@@")(ts_query_ru),
+                    ),
+                    self.model.deleted_at.is_(None),
+                )
+            )
+            .order_by(rank.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(query)
+        return result.scalars().all()
+
+    # Owner read
+    async def get_posts_by_artist_id(
+        self, artist_id: UUID, limit: int, offset: int
+    ) -> Sequence[Post]:
+        query = (
+            select(self.model)
+            .options(
+                selectinload(self.model.artist).load_only(
+                    Artist.id, Artist.displayed_name
+                )
+            )
+            .where(
+                and_(
+                    self.model.artist_id == artist_id,
+                    self.model.deleted_at.is_(None),
+                )
+            )
+            .order_by(self.model.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(query)
+        return result.scalars().all()
+
+    # Owner write
     async def create(
         self,
         artist_id: UUID,
@@ -72,78 +150,3 @@ class PostRepository:
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
-
-    async def get_posts_by_artist_id(
-        self, artist_id: UUID, limit: int, offset: int
-    ) -> Sequence[Post]:
-        query = (
-            select(self.model)
-            .options(
-                selectinload(self.model.artist).load_only(
-                    Artist.id, Artist.displayed_name
-                )
-            )
-            .where(
-                and_(
-                    self.model.artist_id == artist_id,
-                    self.model.deleted_at.is_(None),
-                )
-            )
-            .order_by(self.model.created_at.desc())
-            .limit(limit)
-            .offset(offset)
-        )
-        result = await self._session.execute(query)
-        return result.scalars().all()
-
-    async def get_posts(self, limit: int, offset: int) -> Sequence[Post]:
-        query = (
-            select(self.model)
-            .options(
-                selectinload(self.model.artist).load_only(
-                    Artist.id, Artist.displayed_name
-                )
-            )
-            .where(self.model.deleted_at.is_(None))
-            .order_by(self.model.created_at.desc())
-            .limit(limit)
-            .offset(offset)
-        )
-        result = await self._session.execute(query)
-        return result.scalars().all()
-
-    async def full_text_search_posts(
-        self, search: str, limit: int, offset: int
-    ) -> Sequence[Post]:
-        """
-        Search posts by title and content using full-text search
-        """
-        ts_query_en = func.websearch_to_tsquery("english", search)
-        ts_query_ru = func.websearch_to_tsquery("russian", search)
-
-        rank = func.ts_rank_cd(self.model.search_vector, ts_query_en) + func.ts_rank_cd(
-            self.model.search_vector, ts_query_ru
-        )
-
-        query = (
-            select(self.model)
-            .options(
-                selectinload(self.model.artist).load_only(
-                    Artist.id, Artist.displayed_name
-                )
-            )
-            .where(
-                and_(
-                    or_(
-                        self.model.search_vector.op("@@")(ts_query_en),
-                        self.model.search_vector.op("@@")(ts_query_ru),
-                    ),
-                    self.model.deleted_at.is_(None),
-                )
-            )
-            .order_by(rank.desc())
-            .limit(limit)
-            .offset(offset)
-        )
-        result = await self._session.execute(query)
-        return result.scalars().all()

@@ -3,6 +3,7 @@ from uuid import UUID
 from yn.modules.artists.dto import ArtistDTO
 from yn.modules.artists.errors import (
     ArtistAlreadyExistsError,
+    ArtistConflictError,
     ArtistDisplayedNameTakenError,
 )
 from yn.shared.unit_of_work import UnitOfWork
@@ -12,13 +13,10 @@ class ArtistService:
     def __init__(self, uow: UnitOfWork):
         self.uow = uow
 
+    # Public read
     async def get_all_artists(self, *, limit: int, offset: int) -> list[ArtistDTO]:
         artists = await self.uow.artists.get_artists(limit=limit, offset=offset)
         return [ArtistDTO.from_orm(artist) for artist in artists]
-
-    async def get_artist_by_user_id(self, user_id: UUID) -> ArtistDTO | None:
-        artist = await self.uow.artists.get_artist_by_user_id(user_id)
-        return ArtistDTO.from_orm(artist) if artist else None
 
     async def get_artist_by_id(self, artist_id: UUID) -> ArtistDTO | None:
         artist = await self.uow.artists.get_artist_by_id(artist_id)
@@ -60,6 +58,12 @@ class ArtistService:
 
         return [ArtistDTO.from_orm(artist) for artist in artists]
 
+    # Owner read
+    async def get_artist_by_user_id(self, user_id: UUID) -> ArtistDTO | None:
+        artist = await self.uow.artists.get_artist_by_user_id(user_id)
+        return ArtistDTO.from_orm(artist) if artist else None
+
+    # Owner write
     async def create_artist(
         self,
         user_id: UUID,
@@ -67,22 +71,24 @@ class ArtistService:
         bio: str | None = None,
         social_links: dict[str, str] | None = None,
     ) -> ArtistDTO:
-        existing_artist = await self.uow.artists.get_artist_by_user_id(user_id)
-        if existing_artist is not None:
-            raise ArtistAlreadyExistsError
+        try:
+            artist = await self.uow.artists.create(
+                user_id=user_id,
+                displayed_name=displayed_name,
+                bio=bio,
+                social_links=social_links,
+            )
+        except ArtistConflictError as exc:
+            user_taken, name_taken = await self.uow.artists.get_artist_conflict_flags(
+                user_id=user_id,
+                displayed_name=displayed_name,
+            )
+            if user_taken:
+                raise ArtistAlreadyExistsError from exc
+            if name_taken:
+                raise ArtistDisplayedNameTakenError from exc
+            raise
 
-        existing_name = await self.uow.artists.get_artist_by_displayed_name(
-            displayed_name
-        )
-        if existing_name is not None:
-            raise ArtistDisplayedNameTakenError
-
-        artist = await self.uow.artists.create(
-            user_id=user_id,
-            displayed_name=displayed_name,
-            bio=bio,
-            social_links=social_links,
-        )
         return ArtistDTO.from_orm(artist)
 
     async def update_artist(

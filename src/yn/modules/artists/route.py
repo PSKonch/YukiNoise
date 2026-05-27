@@ -1,4 +1,5 @@
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
@@ -16,6 +17,49 @@ from yn.shared.pagination import PaginationParams, get_pagination_params
 router = APIRouter(prefix="/artists", tags=["artists"])
 
 
+# Public read
+@router.get("/")
+async def get_all_artists(
+    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
+) -> list[ArtistRead]:
+    artists = await artist_service.get_all_artists(
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return [
+        ArtistRead.model_validate(artist, from_attributes=True) for artist in artists
+    ]
+
+
+@router.get("/search")
+async def search_artists(
+    query: str,
+    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
+) -> list[ArtistRead]:
+    artists = await artist_service.full_text_search_artists(
+        query,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return [
+        ArtistRead.model_validate(artist, from_attributes=True) for artist in artists
+    ]
+
+
+@router.get("/{artist_id}")
+async def get_artist_by_id(
+    artist_id: UUID,
+    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+) -> ArtistRead:
+    artist = await artist_service.get_artist_by_id(artist_id)
+    if artist is None:
+        raise ArtistNotFoundError
+    return ArtistRead.model_validate(artist, from_attributes=True)
+
+
+# Owner read/write
 @router.get("/me")
 async def read_current_user_artist_profile(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
@@ -25,6 +69,21 @@ async def read_current_user_artist_profile(
     if artist is None:
         raise ArtistNotFoundError
     return ArtistRead.model_validate(artist, from_attributes=True)
+
+
+@router.post("/")
+async def create_artist(
+    current_user: Annotated[UserDTO, Depends(get_current_user)],
+    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+    payload: ArtistCreate,
+) -> dict[str, str]:
+    await artist_service.create_artist(
+        user_id=current_user.id,
+        displayed_name=payload.displayed_name,
+        bio=payload.bio,
+        social_links=payload.social_links,
+    )
+    return {"detail": "Artist created successfully"}
 
 
 @router.put("/me")
@@ -64,48 +123,3 @@ async def delete_current_user_artist_profile(
         raise ArtistNotFoundError
 
     return {"detail": "Artist deleted successfully"}
-
-
-@router.post("/")
-async def create_artist(
-    current_user: Annotated[UserDTO, Depends(get_current_user)],
-    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
-    payload: ArtistCreate,
-) -> dict[str, str]:
-    await artist_service.create_artist(
-        user_id=current_user.id,
-        displayed_name=payload.displayed_name,
-        bio=payload.bio,
-        social_links=payload.social_links,
-    )
-    return {"detail": "Artist created successfully"}
-
-
-@router.get("/search")
-async def search_artists(
-    query: str,
-    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
-    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
-) -> list[ArtistRead]:
-    artists = await artist_service.full_text_search_artists(
-        query,
-        limit=pagination.limit,
-        offset=pagination.offset,
-    )
-    return [
-        ArtistRead.model_validate(artist, from_attributes=True) for artist in artists
-    ]
-
-
-@router.get("/")
-async def get_all_artists(
-    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
-    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
-) -> list[ArtistRead]:
-    artists = await artist_service.get_all_artists(
-        limit=pagination.limit,
-        offset=pagination.offset,
-    )
-    return [
-        ArtistRead.model_validate(artist, from_attributes=True) for artist in artists
-    ]

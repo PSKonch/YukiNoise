@@ -26,6 +26,18 @@ class TrackService:
         self.uow = uow
         self.release_service = release_service
 
+    # Public read
+    async def get_tracks(self, *, limit: int, offset: int) -> list[TrackDTO]:
+        tracks = await self.uow.tracks.get_tracks(limit=limit, offset=offset)
+        return [TrackDTO.from_orm(track) for track in tracks]
+
+    async def get_track_by_id(self, track_id: UUID) -> TrackDTO:
+        track = await self.uow.tracks.get_track_by_id(track_id)
+        if track is None:
+            raise TrackNotFoundError
+        return TrackDTO.from_orm(track)
+
+    # Owner write
     async def upload_track(
         self,
         *,
@@ -43,9 +55,9 @@ class TrackService:
 
         validate_track_number_in_release(track_number_in_release)
         validate_track_filename(file.filename)
-        await self._ensure_track_title_is_available(release_id=release_id, title=title)
-        await self._ensure_track_number_is_available(
+        await self._ensure_track_is_available(
             release_id=release_id,
+            title=title,
             track_number_in_release=track_number_in_release,
         )
 
@@ -81,28 +93,18 @@ class TrackService:
             track_number_in_release=track_number_in_release,
         )
 
-    async def get_track_by_id(self, track_id: UUID) -> TrackDTO:
-        track = await self.uow.tracks.get_track_by_id(track_id)
-        if track is None:
-            raise TrackNotFoundError
-        return TrackDTO.from_orm(track)
-
-    async def get_tracks(self, *, limit: int, offset: int) -> list[TrackDTO]:
-        tracks = await self.uow.tracks.get_tracks(limit=limit, offset=offset)
-        return [TrackDTO.from_orm(track) for track in tracks]
-
-    async def _ensure_track_title_is_available(
-        self, *, release_id: UUID, title: str
+    # Validation helpers
+    async def _ensure_track_is_available(
+        self,
+        *,
+        release_id: UUID,
+        title: str,
+        track_number_in_release: int,
     ) -> None:
-        track = await self.uow.tracks.get_track_by_release_and_title(release_id, title)
-        if track is not None:
-            raise TrackConflictError
-
-    async def _ensure_track_number_is_available(
-        self, *, release_id: UUID, track_number_in_release: int
-    ) -> None:
-        track = await self.uow.tracks.get_track_by_release_and_number(
-            release_id, track_number_in_release
+        track = await self.uow.tracks.get_conflicting_track_for_release(
+            release_id=release_id,
+            title=title,
+            track_number_in_release=track_number_in_release,
         )
         if track is not None:
             raise TrackConflictError

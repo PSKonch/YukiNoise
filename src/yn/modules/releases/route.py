@@ -27,6 +27,112 @@ from yn.tasks.release_cover_upload import process_release_cover_upload
 router = APIRouter(prefix="/releases", tags=["releases"])
 
 
+# Public read
+@router.get("/")
+async def get_releases(
+    release_service: Annotated[ReleaseService, Depends(get_release_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
+) -> list[ReleaseRead]:
+    releases = await release_service.get_releases(
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return [
+        ReleaseRead.model_validate(release, from_attributes=True)
+        for release in releases
+    ]
+
+
+@router.get("/search")
+async def search_releases(
+    search_term: str,
+    release_service: Annotated[ReleaseService, Depends(get_release_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
+) -> list[ReleaseRead]:
+    releases = await release_service.trgm_search_by_title(
+        search_term,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return [
+        ReleaseRead.model_validate(release, from_attributes=True)
+        for release in releases
+    ]
+
+
+@router.get("/with-tracks-and-author")
+async def get_releases_with_tracks_and_author_profile(
+    release_service: Annotated[ReleaseService, Depends(get_release_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
+) -> list[ReleaseWithTracksAndAuthorRead]:
+    releases = await release_service.get_releases_with_tracks_and_author_profile(
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return [
+        ReleaseWithTracksAndAuthorRead.model_validate(release, from_attributes=True)
+        for release in releases
+    ]
+
+
+@router.get("/{release_id}")
+async def get_release_by_id(
+    release_service: Annotated[ReleaseService, Depends(get_release_service)],
+    release_id: UUID,
+) -> ReleaseRead:
+    release = await release_service.get_release_by_id(release_id)
+    return ReleaseRead.model_validate(release, from_attributes=True)
+
+
+@router.get("/{release_id}/with-tracks-and-author")
+async def get_release_with_tracks_and_author_profile_by_id(
+    release_service: Annotated[ReleaseService, Depends(get_release_service)],
+    release_id: UUID,
+) -> ReleaseWithTracksAndAuthorRead:
+    release = await release_service.get_release_with_tracks_and_author_profile_by_id(
+        release_id=release_id
+    )
+    return ReleaseWithTracksAndAuthorRead.model_validate(release, from_attributes=True)
+
+
+# Owner read
+@router.get("/me")
+async def get_owned_releases(
+    current_user: Annotated[UserDTO, Depends(get_current_user)],
+    release_service: Annotated[ReleaseService, Depends(get_release_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
+) -> list[ReleaseRead]:
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
+
+    releases = await release_service.get_owned_releases(
+        artist_id=current_user.artist_id,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return [
+        ReleaseRead.model_validate(release, from_attributes=True)
+        for release in releases
+    ]
+
+
+@router.get("/me/{release_id}")
+async def get_owned_release_by_id(
+    current_user: Annotated[UserDTO, Depends(get_current_user)],
+    release_service: Annotated[ReleaseService, Depends(get_release_service)],
+    release_id: UUID,
+) -> ReleaseRead:
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
+
+    release = await release_service.get_owned_release_by_id_including_deleted(
+        release_id=release_id,
+        artist_id=current_user.artist_id,
+    )
+    return ReleaseRead.model_validate(release, from_attributes=True)
+
+
+# Owner write
 @router.post("/")
 async def create_release(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
@@ -104,109 +210,6 @@ async def upload_release_cover(
         raise ReleaseCoverUploadFailedError from exc
 
     return ReleaseCoverUploadAccepted(release_id=release_id)
-
-
-@router.get("/")
-async def get_releases(
-    release_service: Annotated[ReleaseService, Depends(get_release_service)],
-    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
-) -> list[ReleaseRead]:
-    releases = await release_service.get_releases(
-        limit=pagination.limit,
-        offset=pagination.offset,
-    )
-    return [
-        ReleaseRead.model_validate(release, from_attributes=True)
-        for release in releases
-    ]
-
-
-@router.get("/me")
-async def get_owned_releases(
-    current_user: Annotated[UserDTO, Depends(get_current_user)],
-    release_service: Annotated[ReleaseService, Depends(get_release_service)],
-    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
-) -> list[ReleaseRead]:
-    if current_user.artist_id is None:
-        raise ArtistNotFoundError
-
-    releases = await release_service.get_owned_releases(
-        artist_id=current_user.artist_id,
-        limit=pagination.limit,
-        offset=pagination.offset,
-    )
-    return [
-        ReleaseRead.model_validate(release, from_attributes=True)
-        for release in releases
-    ]
-
-
-@router.get("/{release_id}")
-async def get_release_by_id(
-    release_service: Annotated[ReleaseService, Depends(get_release_service)],
-    release_id: UUID,
-) -> ReleaseRead:
-    release = await release_service.get_release_by_id(release_id)
-    return ReleaseRead.model_validate(release, from_attributes=True)
-
-
-@router.get("/me/{release_id}")
-async def get_owned_release_by_id(
-    current_user: Annotated[UserDTO, Depends(get_current_user)],
-    release_service: Annotated[ReleaseService, Depends(get_release_service)],
-    release_id: UUID,
-) -> ReleaseRead:
-    if current_user.artist_id is None:
-        raise ArtistNotFoundError
-
-    release = await release_service.get_owned_release_by_id(
-        release_id=release_id,
-        artist_id=current_user.artist_id,
-    )
-    return ReleaseRead.model_validate(release, from_attributes=True)
-
-
-@router.get("/search")
-async def search_releases(
-    search_term: str,
-    release_service: Annotated[ReleaseService, Depends(get_release_service)],
-    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
-) -> list[ReleaseRead]:
-    releases = await release_service.trgm_search_by_title(
-        search_term,
-        limit=pagination.limit,
-        offset=pagination.offset,
-    )
-    return [
-        ReleaseRead.model_validate(release, from_attributes=True)
-        for release in releases
-    ]
-
-
-@router.get("/with-tracks-and-author")
-async def get_releases_with_tracks_and_author_profile(
-    release_service: Annotated[ReleaseService, Depends(get_release_service)],
-    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
-) -> list[ReleaseWithTracksAndAuthorRead]:
-    releases = await release_service.get_releases_with_tracks_and_author_profile(
-        limit=pagination.limit,
-        offset=pagination.offset,
-    )
-    return [
-        ReleaseWithTracksAndAuthorRead.model_validate(release, from_attributes=True)
-        for release in releases
-    ]
-
-
-@router.get("/{release_id}/with-tracks-and-author")
-async def get_release_with_tracks_and_author_profile_by_id(
-    release_service: Annotated[ReleaseService, Depends(get_release_service)],
-    release_id: UUID,
-) -> ReleaseWithTracksAndAuthorRead:
-    release = await release_service.get_release_with_tracks_and_author_profile_by_id(
-        release_id=release_id
-    )
-    return ReleaseWithTracksAndAuthorRead.model_validate(release, from_attributes=True)
 
 
 @router.patch("/{release_id}/release")
