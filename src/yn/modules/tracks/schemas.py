@@ -14,6 +14,12 @@ class TrackCreate(TrackBase):
     release_id: UUID
 
 
+class TrackUpdate(BaseModel):
+    title: str | None = None
+    track_number_in_release: int | None = Field(default=None, ge=1)
+    genres: list[str] | None = None
+
+
 class TrackRead(TrackBase):
     id: UUID
     release_id: UUID

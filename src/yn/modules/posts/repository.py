@@ -70,6 +70,19 @@ class PostRepository:
         result = await self._session.execute(query)
         return result.scalars().all()
 
+    async def get_post_by_id(self, post_id: UUID) -> Post | None:
+        query = (
+            select(self.model)
+            .options(
+                selectinload(self.model.artist).load_only(
+                    Artist.id, Artist.displayed_name
+                )
+            )
+            .where(and_(self.model.id == post_id, self.model.deleted_at.is_(None)))
+        )
+        result = await self._session.execute(query)
+        return result.scalar_one_or_none()
+
     # Owner read
     async def get_posts_by_artist_id(
         self, artist_id: UUID, limit: int, offset: int
@@ -93,6 +106,27 @@ class PostRepository:
         )
         result = await self._session.execute(query)
         return result.scalars().all()
+
+    async def get_post_by_id_for_artist(
+        self, post_id: UUID, artist_id: UUID
+    ) -> Post | None:
+        query = (
+            select(self.model)
+            .options(
+                selectinload(self.model.artist).load_only(
+                    Artist.id, Artist.displayed_name
+                )
+            )
+            .where(
+                and_(
+                    self.model.id == post_id,
+                    self.model.artist_id == artist_id,
+                    self.model.deleted_at.is_(None),
+                )
+            )
+        )
+        result = await self._session.execute(query)
+        return result.scalar_one_or_none()
 
     # Owner write
     async def create(

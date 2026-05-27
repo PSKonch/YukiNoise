@@ -44,6 +44,15 @@ async def get_posts(
     return [PostRead.model_validate(post, from_attributes=True) for post in posts]
 
 
+@router.get("/{post_id}")
+async def get_post_by_id(
+    post_service: Annotated[PostService, Depends(get_post_service)],
+    post_id: UUID,
+) -> PostRead:
+    post = await post_service.get_post_by_id(post_id)
+    return PostRead.model_validate(post, from_attributes=True)
+
+
 # Owner write
 @router.post("/")
 async def create_post(
@@ -58,6 +67,40 @@ async def create_post(
         artist_id=current_user.artist_id,
         title=payload.title,
         content=payload.content,
+    )
+    return PostRead.model_validate(post, from_attributes=True)
+
+
+# Owner read
+@router.get("/me")
+async def get_owned_posts(
+    current_user: Annotated[UserDTO, Depends(get_current_user)],
+    post_service: Annotated[PostService, Depends(get_post_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
+) -> list[PostRead]:
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
+
+    posts = await post_service.get_owned_posts(
+        artist_id=current_user.artist_id,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return [PostRead.model_validate(post, from_attributes=True) for post in posts]
+
+
+@router.get("/me/{post_id}")
+async def get_owned_post_by_id(
+    current_user: Annotated[UserDTO, Depends(get_current_user)],
+    post_service: Annotated[PostService, Depends(get_post_service)],
+    post_id: UUID,
+) -> PostRead:
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
+
+    post = await post_service.get_owned_post_by_id(
+        post_id=post_id,
+        artist_id=current_user.artist_id,
     )
     return PostRead.model_validate(post, from_attributes=True)
 

@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Sequence
 from uuid import UUID
 
-from sqlalchemy import and_, func, insert, or_, select
+from sqlalchemy import and_, func, insert, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager
@@ -72,6 +72,27 @@ class TrackRepository:
         result = await self._session.execute(stmt)
         return result.scalars().all()
 
+    async def get_tracks_by_artist_id(
+        self, artist_id: UUID, limit: int, offset: int
+    ) -> Sequence[Track]:
+        stmt = (
+            select(self.model)
+            .join(self.model.release)
+            .options(contains_eager(self.model.release))
+            .where(
+                and_(
+                    self.model.deleted_at.is_(None),
+                    Release.artist_id == artist_id,
+                    Release.publicly_visible_clause(),
+                )
+            )
+            .order_by(self.model.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalars().all()
+
     # Owner read
     async def get_track_by_release_and_title(
         self, release_id: UUID, title: str
@@ -94,6 +115,46 @@ class TrackRepository:
                 self.model.release_id == release_id,
                 self.model.track_number_in_release == track_number_in_release,
                 self.model.deleted_at.is_(None),
+            )
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_owned_tracks_by_artist_id(
+        self, artist_id: UUID, limit: int, offset: int
+    ) -> Sequence[Track]:
+        stmt = (
+            select(self.model)
+            .join(self.model.release)
+            .options(contains_eager(self.model.release))
+            .where(
+                and_(
+                    self.model.deleted_at.is_(None),
+                    Release.artist_id == artist_id,
+                    Release.deleted_at.is_(None),
+                )
+            )
+            .order_by(self.model.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalars().all()
+
+    async def get_track_by_id_for_artist(
+        self, track_id: UUID, artist_id: UUID
+    ) -> Track | None:
+        stmt = (
+            select(self.model)
+            .join(self.model.release)
+            .options(contains_eager(self.model.release))
+            .where(
+                and_(
+                    self.model.id == track_id,
+                    self.model.deleted_at.is_(None),
+                    Release.artist_id == artist_id,
+                    Release.deleted_at.is_(None),
+                )
             )
         )
         result = await self._session.execute(stmt)
@@ -152,3 +213,57 @@ class TrackRepository:
         except IntegrityError as exc:
             raise TrackConflictError from exc
         return result.scalar_one()
+
+    async def update(
+        self,
+        *,
+        track_id: UUID,
+        release_id: UUID,
+        title: str | None = None,
+        track_number_in_release: int | None = None,
+        genres: list[str] | None = None,
+    ) -> Track | None:
+        values: dict[str, object] = {}
+        if title is not None:
+            values["title"] = title
+        if track_number_in_release is not None:
+            values["track_number_in_release"] = track_number_in_release
+        if genres is not None:
+            values["genres"] = genres
+
+        if not values:
+            return None
+
+        stmt = (
+            update(self.model)
+            .where(
+                and_(
+                    self.model.id == track_id,
+                    self.model.release_id == release_id,
+                    self.model.deleted_at.is_(None),
+                )
+            )
+            .values(**values)
+            .returning(self.model)
+        )
+        try:
+            result = await self._session.execute(stmt)
+        except IntegrityError as exc:
+            raise TrackConflictError from exc
+        return result.scalar_one_or_none()
+
+    async def soft_delete(self, track_id: UUID, release_id: UUID) -> bool:
+        stmt = (
+            update(self.model)
+            .where(
+                and_(
+                    self.model.id == track_id,
+                    self.model.release_id == release_id,
+                    self.model.deleted_at.is_(None),
+                )
+            )
+            .values(deleted_at=func.now())
+            .returning(self.model.id)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none() is not None

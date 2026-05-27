@@ -10,6 +10,10 @@ from yn.modules.artists.errors import (
 )
 from yn.modules.artists.schemas import ArtistCreate, ArtistRead, ArtistUpdate
 from yn.modules.artists.service import ArtistService
+from yn.modules.playlists.schemas import PlaylistRead
+from yn.modules.posts.schemas import PostRead
+from yn.modules.releases.schemas import ReleaseRead
+from yn.modules.tracks.schemas import TrackRead
 from yn.modules.users.auth import get_current_user
 from yn.modules.users.dto import UserDTO
 from yn.shared.pagination import PaginationParams, get_pagination_params
@@ -59,6 +63,84 @@ async def get_artist_by_id(
     return ArtistRead.model_validate(artist, from_attributes=True)
 
 
+@router.get("/{artist_id}/releases")
+async def get_artist_releases(
+    artist_id: UUID,
+    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
+) -> list[ReleaseRead]:
+    artist = await artist_service.get_artist_by_id(artist_id)
+    if artist is None:
+        raise ArtistNotFoundError
+
+    releases = await artist_service.get_artist_releases(
+        artist_id=artist_id,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return [
+        ReleaseRead.model_validate(release, from_attributes=True)
+        for release in releases
+    ]
+
+
+@router.get("/{artist_id}/tracks")
+async def get_artist_tracks(
+    artist_id: UUID,
+    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
+) -> list[TrackRead]:
+    artist = await artist_service.get_artist_by_id(artist_id)
+    if artist is None:
+        raise ArtistNotFoundError
+
+    tracks = await artist_service.get_artist_tracks(
+        artist_id=artist_id,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return [TrackRead.model_validate(track, from_attributes=True) for track in tracks]
+
+
+@router.get("/{artist_id}/posts")
+async def get_artist_posts(
+    artist_id: UUID,
+    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
+) -> list[PostRead]:
+    artist = await artist_service.get_artist_by_id(artist_id)
+    if artist is None:
+        raise ArtistNotFoundError
+
+    posts = await artist_service.get_artist_posts(
+        artist_id=artist_id,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return [PostRead.model_validate(post, from_attributes=True) for post in posts]
+
+
+@router.get("/{artist_id}/playlists")
+async def get_artist_playlists(
+    artist_id: UUID,
+    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
+) -> list[PlaylistRead]:
+    artist = await artist_service.get_artist_by_id(artist_id)
+    if artist is None:
+        raise ArtistNotFoundError
+
+    playlists = await artist_service.get_artist_playlists(
+        artist_id=artist_id,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return [
+        PlaylistRead.model_validate(playlist, from_attributes=True)
+        for playlist in playlists
+    ]
+
+
 # Owner read/write
 @router.get("/me")
 async def read_current_user_artist_profile(
@@ -69,6 +151,80 @@ async def read_current_user_artist_profile(
     if artist is None:
         raise ArtistNotFoundError
     return ArtistRead.model_validate(artist, from_attributes=True)
+
+
+@router.get("/me/releases")
+async def get_owned_releases(
+    current_user: Annotated[UserDTO, Depends(get_current_user)],
+    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
+) -> list[ReleaseRead]:
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
+
+    releases = await artist_service.get_owned_releases(
+        artist_id=current_user.artist_id,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return [
+        ReleaseRead.model_validate(release, from_attributes=True)
+        for release in releases
+    ]
+
+
+@router.get("/me/tracks")
+async def get_owned_tracks(
+    current_user: Annotated[UserDTO, Depends(get_current_user)],
+    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
+) -> list[TrackRead]:
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
+
+    tracks = await artist_service.get_owned_tracks(
+        artist_id=current_user.artist_id,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return [TrackRead.model_validate(track, from_attributes=True) for track in tracks]
+
+
+@router.get("/me/posts")
+async def get_owned_posts(
+    current_user: Annotated[UserDTO, Depends(get_current_user)],
+    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
+) -> list[PostRead]:
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
+
+    posts = await artist_service.get_owned_posts(
+        artist_id=current_user.artist_id,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return [PostRead.model_validate(post, from_attributes=True) for post in posts]
+
+
+@router.get("/me/playlists")
+async def get_owned_playlists(
+    current_user: Annotated[UserDTO, Depends(get_current_user)],
+    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+    pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
+) -> list[PlaylistRead]:
+    if current_user.artist_id is None:
+        raise ArtistNotFoundError
+
+    playlists = await artist_service.get_owned_playlists(
+        artist_id=current_user.artist_id,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return [
+        PlaylistRead.model_validate(playlist, from_attributes=True)
+        for playlist in playlists
+    ]
 
 
 @router.post("/")
