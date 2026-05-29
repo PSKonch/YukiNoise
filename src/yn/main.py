@@ -3,6 +3,7 @@ from typing import AsyncGenerator
 
 import uvicorn
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from yn.modules.artists.route import router as artists_router
 from yn.modules.playlists.route import router as playlists_router
@@ -55,6 +56,9 @@ app = FastAPI(
     version="0.0.1",
     lifespan=lifespan,
 )
+
+
+Instrumentator().instrument(app).expose(app)
 
 
 def get_minio() -> MinioStorage:

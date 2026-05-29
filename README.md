@@ -7,7 +7,7 @@ This project uses a `src/` layout, so the package must be installed into the act
 
 ```bash
 ./venv/bin/pip install -e .
-./venv/bin/uvicorn yn.main:app --reload
+./venv/bin/uvicorn yn.main:app --host 0.0.0.0 --reload
 ```
 
 ## Media uploads
