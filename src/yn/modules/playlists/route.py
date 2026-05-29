@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 
 from yn.modules.artists.errors import ArtistNotFoundError
-from yn.modules.playlists.deps import get_playlist_service
+from yn.modules.playlists.deps import get_playlist_read_service, get_playlist_service
 from yn.modules.playlists.errors import EmptyPlaylistUpdateError
 from yn.modules.playlists.schemas import (
     PlaylistCreate,
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/playlists", tags=["playlists"])
 # Public read
 @router.get("/")
 async def get_playlists(
-    playlist_service: Annotated[PlaylistService, Depends(get_playlist_service)],
+    playlist_service: Annotated[PlaylistService, Depends(get_playlist_read_service)],
     pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[PlaylistRead]:
     playlists = await playlist_service.get_playlists(
@@ -38,7 +38,7 @@ async def get_playlists(
 
 @router.get("/{playlist_id:uuid}")
 async def get_playlist_by_id(
-    playlist_service: Annotated[PlaylistService, Depends(get_playlist_service)],
+    playlist_service: Annotated[PlaylistService, Depends(get_playlist_read_service)],
     playlist_id: UUID,
 ) -> PlaylistRead:
     playlist = await playlist_service.get_playlist_by_id(playlist_id)
@@ -47,7 +47,7 @@ async def get_playlist_by_id(
 
 @router.get("/{playlist_id:uuid}/tracks")
 async def get_playlist_tracks(
-    playlist_service: Annotated[PlaylistService, Depends(get_playlist_service)],
+    playlist_service: Annotated[PlaylistService, Depends(get_playlist_read_service)],
     playlist_id: UUID,
     pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[PlaylistTrackRead]:

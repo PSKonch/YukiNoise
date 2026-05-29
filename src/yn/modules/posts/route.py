@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 
 from yn.modules.artists.errors import ArtistNotFoundError
-from yn.modules.posts.deps import get_post_service
+from yn.modules.posts.deps import get_post_read_service, get_post_service
 from yn.modules.posts.errors import (
     EmptyPostUpdateError,
 )
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/posts", tags=["posts"])
 @router.get("/search")
 async def search_posts(
     query: str,
-    post_service: Annotated[PostService, Depends(get_post_service)],
+    post_service: Annotated[PostService, Depends(get_post_read_service)],
     pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[PostRead]:
     posts = await post_service.full_text_search_posts(
@@ -34,7 +34,7 @@ async def search_posts(
 
 @router.get("/")
 async def get_posts(
-    post_service: Annotated[PostService, Depends(get_post_service)],
+    post_service: Annotated[PostService, Depends(get_post_read_service)],
     pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[PostRead]:
     posts = await post_service.get_posts(
@@ -46,7 +46,7 @@ async def get_posts(
 
 @router.get("/{post_id:uuid}")
 async def get_post_by_id(
-    post_service: Annotated[PostService, Depends(get_post_service)],
+    post_service: Annotated[PostService, Depends(get_post_read_service)],
     post_id: UUID,
 ) -> PostRead:
     post = await post_service.get_post_by_id(post_id)

@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from yn.shared.database import get_session
+from yn.shared.database import get_primary_session, get_replica_session
 
 if TYPE_CHECKING:
     from yn.modules.artists.repository import ArtistRepository
@@ -109,7 +109,29 @@ class UnitOfWork:
         await self._session.rollback()
 
 
+class ReadOnlyUnitOfWork(UnitOfWork):
+    async def __aenter__(self) -> "ReadOnlyUnitOfWork":
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        await self._session.rollback()
+
+    async def commit(self) -> None:
+        raise RuntimeError("Read-only unit of work cannot commit.")
+
+
 async def get_uow() -> AsyncGenerator["UnitOfWork", None]:
-    async for session in get_session():
+    async for session in get_primary_session():
         async with UnitOfWork(session) as uow:
+            yield uow
+
+
+async def get_read_uow() -> AsyncGenerator["ReadOnlyUnitOfWork", None]:
+    async for session in get_replica_session():
+        async with ReadOnlyUnitOfWork(session) as uow:
             yield uow
