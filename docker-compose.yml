@@ -16,6 +16,23 @@ services:
       timeout: 5s
       retries: 10
 
+  db_replica:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: yukinoise
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_replica_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d yukinoise" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   rabbitmq:
     image: rabbitmq:3-management-alpine
     restart: unless-stopped
@@ -46,15 +63,23 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      db_replica:
+        condition: service_healthy
       rabbitmq:
         condition: service_started
       minio:
         condition: service_started
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: yukinoise
-      POSTGRES_HOST: db
+      POSTGRES_PRIMARY_USER: postgres
+      POSTGRES_PRIMARY_PASSWORD: postgres
+      POSTGRES_PRIMARY_DB: yukinoise
+      POSTGRES_PRIMARY_HOST: db
+      POSTGRES_PRIMARY_PORT: 5432
+      POSTGRES_REPLICA_USER: postgres
+      POSTGRES_REPLICA_PASSWORD: postgres
+      POSTGRES_REPLICA_DB: yukinoise
+      POSTGRES_REPLICA_HOST: db_replica
+      POSTGRES_REPLICA_PORT: 5432
       APP_HOST: 0.0.0.0
       APP_PORT: 8000
       APP_WORKERS: 1
@@ -80,15 +105,23 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      db_replica:
+        condition: service_healthy
       rabbitmq:
         condition: service_started
       minio:
         condition: service_started
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: yukinoise
-      POSTGRES_HOST: db
+      POSTGRES_PRIMARY_USER: postgres
+      POSTGRES_PRIMARY_PASSWORD: postgres
+      POSTGRES_PRIMARY_DB: yukinoise
+      POSTGRES_PRIMARY_HOST: db
+      POSTGRES_PRIMARY_PORT: 5432
+      POSTGRES_REPLICA_USER: postgres
+      POSTGRES_REPLICA_PASSWORD: postgres
+      POSTGRES_REPLICA_DB: yukinoise
+      POSTGRES_REPLICA_HOST: db_replica
+      POSTGRES_REPLICA_PORT: 5432
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
@@ -109,15 +142,23 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      db_replica:
+        condition: service_healthy
       rabbitmq:
         condition: service_started
       minio:
         condition: service_started
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: yukinoise
-      POSTGRES_HOST: db
+      POSTGRES_PRIMARY_USER: postgres
+      POSTGRES_PRIMARY_PASSWORD: postgres
+      POSTGRES_PRIMARY_DB: yukinoise
+      POSTGRES_PRIMARY_HOST: db
+      POSTGRES_PRIMARY_PORT: 5432
+      POSTGRES_REPLICA_USER: postgres
+      POSTGRES_REPLICA_PASSWORD: postgres
+      POSTGRES_REPLICA_DB: yukinoise
+      POSTGRES_REPLICA_HOST: db_replica
+      POSTGRES_REPLICA_PORT: 5432
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
@@ -133,6 +174,7 @@ services:
 
 volumes:
   postgres_data:
+  postgres_replica_data:
   minio_data:
   track_upload_tmp:
 

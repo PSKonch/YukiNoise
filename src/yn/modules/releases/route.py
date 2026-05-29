@@ -9,7 +9,7 @@ from yn.modules.releases.cover_uploader import (
     build_release_cover_storage_key,
     copy_upload_to_shared_tempfile,
 )
-from yn.modules.releases.deps import get_release_service
+from yn.modules.releases.deps import get_release_read_service, get_release_service
 from yn.modules.releases.errors import ReleaseCoverUploadFailedError
 from yn.modules.releases.schemas import (
     ReleaseCoverUploadAccepted,
@@ -30,7 +30,7 @@ router = APIRouter(prefix="/releases", tags=["releases"])
 # Public read
 @router.get("/")
 async def get_releases(
-    release_service: Annotated[ReleaseService, Depends(get_release_service)],
+    release_service: Annotated[ReleaseService, Depends(get_release_read_service)],
     pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[ReleaseRead]:
     releases = await release_service.get_releases(
@@ -46,7 +46,7 @@ async def get_releases(
 @router.get("/search")
 async def search_releases(
     search_term: str,
-    release_service: Annotated[ReleaseService, Depends(get_release_service)],
+    release_service: Annotated[ReleaseService, Depends(get_release_read_service)],
     pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[ReleaseRead]:
     releases = await release_service.trgm_search_by_title(
@@ -62,7 +62,7 @@ async def search_releases(
 
 @router.get("/with-tracks-and-author")
 async def get_releases_with_tracks_and_author_profile(
-    release_service: Annotated[ReleaseService, Depends(get_release_service)],
+    release_service: Annotated[ReleaseService, Depends(get_release_read_service)],
     pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[ReleaseWithTracksAndAuthorRead]:
     releases = await release_service.get_releases_with_tracks_and_author_profile(
@@ -77,7 +77,7 @@ async def get_releases_with_tracks_and_author_profile(
 
 @router.get("/{release_id:uuid}")
 async def get_release_by_id(
-    release_service: Annotated[ReleaseService, Depends(get_release_service)],
+    release_service: Annotated[ReleaseService, Depends(get_release_read_service)],
     release_id: UUID,
 ) -> ReleaseRead:
     release = await release_service.get_release_by_id(release_id)
@@ -86,7 +86,7 @@ async def get_release_by_id(
 
 @router.get("/{release_id:uuid}/with-tracks-and-author")
 async def get_release_with_tracks_and_author_profile_by_id(
-    release_service: Annotated[ReleaseService, Depends(get_release_service)],
+    release_service: Annotated[ReleaseService, Depends(get_release_read_service)],
     release_id: UUID,
 ) -> ReleaseWithTracksAndAuthorRead:
     release = await release_service.get_release_with_tracks_and_author_profile_by_id(

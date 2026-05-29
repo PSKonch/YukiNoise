@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from yn.modules.artists.errors import ArtistNotFoundError
-from yn.modules.tracks.deps import get_track_service
+from yn.modules.tracks.deps import get_track_read_service, get_track_service
 from yn.modules.tracks.errors import EmptyTrackUpdateError
 from yn.modules.tracks.schemas import TrackRead, TrackUpdate, TrackUploadAccepted
 from yn.modules.tracks.service import TrackService
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/tracks", tags=["tracks"])
 # Public read
 @router.get("/")
 async def get_tracks(
-    track_service: Annotated[TrackService, Depends(get_track_service)],
+    track_service: Annotated[TrackService, Depends(get_track_read_service)],
     pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[TrackRead]:
     tracks = await track_service.get_tracks(
@@ -30,7 +30,7 @@ async def get_tracks(
 
 @router.get("/{track_id:uuid}")
 async def get_track_by_id(
-    track_service: Annotated[TrackService, Depends(get_track_service)],
+    track_service: Annotated[TrackService, Depends(get_track_read_service)],
     track_id: UUID,
 ) -> TrackRead:
     track = await track_service.get_track_by_id(track_id)

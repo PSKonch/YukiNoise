@@ -1,6 +1,6 @@
 from yn.modules.releases.service import ReleaseService
 from yn.modules.tracks.uploader import TrackUploadPayload, TrackUploadProcessor
-from yn.shared.database import async_session
+from yn.shared.database import async_primary_session
 from yn.shared.minio import MinioStorage
 from yn.shared.settings import settings
 from yn.shared.unit_of_work import UnitOfWork
@@ -28,7 +28,7 @@ async def process_track_upload(payload: dict[str, object]) -> None:
     upload_payload = TrackUploadPayload.from_message(payload)
     storage = _get_worker_storage()
 
-    async with async_session() as session:
+    async with async_primary_session() as session:
         async with UnitOfWork(session) as uow:
             processor = TrackUploadProcessor(uow, storage, ReleaseService(uow, storage))
             await processor.process(upload_payload)

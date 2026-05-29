@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
-from yn.modules.artists.deps import get_artist_service
+from yn.modules.artists.deps import get_artist_read_service, get_artist_service
 from yn.modules.artists.errors import (
     ArtistNotFoundError,
     EmptyArtistUpdateError,
@@ -24,7 +24,7 @@ router = APIRouter(prefix="/artists", tags=["artists"])
 # Public read
 @router.get("/")
 async def get_all_artists(
-    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+    artist_service: Annotated[ArtistService, Depends(get_artist_read_service)],
     pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[ArtistRead]:
     artists = await artist_service.get_all_artists(
@@ -39,7 +39,7 @@ async def get_all_artists(
 @router.get("/search")
 async def search_artists(
     query: str,
-    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+    artist_service: Annotated[ArtistService, Depends(get_artist_read_service)],
     pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[ArtistRead]:
     artists = await artist_service.full_text_search_artists(
@@ -55,7 +55,7 @@ async def search_artists(
 @router.get("/{artist_id:uuid}")
 async def get_artist_by_id(
     artist_id: UUID,
-    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+    artist_service: Annotated[ArtistService, Depends(get_artist_read_service)],
 ) -> ArtistRead:
     artist = await artist_service.get_artist_by_id(artist_id)
     if artist is None:
@@ -66,7 +66,7 @@ async def get_artist_by_id(
 @router.get("/{artist_id:uuid}/releases")
 async def get_artist_releases(
     artist_id: UUID,
-    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+    artist_service: Annotated[ArtistService, Depends(get_artist_read_service)],
     pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[ReleaseRead]:
     artist = await artist_service.get_artist_by_id(artist_id)
@@ -87,7 +87,7 @@ async def get_artist_releases(
 @router.get("/{artist_id:uuid}/tracks")
 async def get_artist_tracks(
     artist_id: UUID,
-    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+    artist_service: Annotated[ArtistService, Depends(get_artist_read_service)],
     pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[TrackRead]:
     artist = await artist_service.get_artist_by_id(artist_id)
@@ -105,7 +105,7 @@ async def get_artist_tracks(
 @router.get("/{artist_id:uuid}/posts")
 async def get_artist_posts(
     artist_id: UUID,
-    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+    artist_service: Annotated[ArtistService, Depends(get_artist_read_service)],
     pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[PostRead]:
     artist = await artist_service.get_artist_by_id(artist_id)
@@ -123,7 +123,7 @@ async def get_artist_posts(
 @router.get("/{artist_id:uuid}/playlists")
 async def get_artist_playlists(
     artist_id: UUID,
-    artist_service: Annotated[ArtistService, Depends(get_artist_service)],
+    artist_service: Annotated[ArtistService, Depends(get_artist_read_service)],
     pagination: Annotated[PaginationParams, Depends(get_pagination_params)],
 ) -> list[PlaylistRead]:
     artist = await artist_service.get_artist_by_id(artist_id)
