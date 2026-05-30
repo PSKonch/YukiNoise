@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: yukinoise-app
+  namespace: yukinoise-dev
+  labels:
+    app: yukinoise
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: yukinoise
+  template:
+    metadata:
+      labels:
+        app: yukinoise
+    spec:
+      containers:
+      - name: yukinoise
+        image: yukinoise-app:local
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: yukinoise-config
+        - secretRef:
+            name: yukinoise-secrets
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        readinessProbe:
+          tcpSocket:
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 3
+        livenessProbe:
+          tcpSocket:
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          failureThreshold: 3

@@ -1,13 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: yukinoise-app
+  name: db
   namespace: yukinoise-dev
 spec:
   selector:
-    app: yukinoise
+    app: postgres
   ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 8000
+  - port: 5432
+    targetPort: 5432
   type: ClusterIP
