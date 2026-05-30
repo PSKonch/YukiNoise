@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: yukinoise-config
+  namespace: yukinoise-dev
+data:
+  APP_HOST: "0.0.0.0"
+  APP_PORT: "8000"
+  APP_WORKERS: "1"
+  MINIO_ENDPOINT: "minio:9000"
+  MINIO_SECURE: "false"
+  RABBITMQ_HOST: "rabbitmq"
+  RABBITMQ_PORT: "5672"
+  UPLOAD_TEMP_DIR: "/tmp/yukinoise/uploads"
