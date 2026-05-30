@@ -56,6 +56,29 @@ services:
     volumes:
       - minio_data:/data
 
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    container_name: prometheus
+    ports:
+      - 9090:9090
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./prometheus_data/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+
   app:
     build:
       context: .
@@ -68,6 +91,10 @@ services:
       rabbitmq:
         condition: service_started
       minio:
+        condition: service_started
+      prometheus:
+        condition: service_started
+      grafana:
         condition: service_started
     environment:
       POSTGRES_PRIMARY_USER: postgres
