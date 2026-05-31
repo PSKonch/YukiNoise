@@ -1,7 +1,9 @@
+from collections.abc import AsyncIterator
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi.responses import StreamingResponse
 
 from yn.modules.artists.errors import ArtistNotFoundError
 from yn.modules.tracks.deps import get_track_read_service, get_track_service
@@ -10,7 +12,9 @@ from yn.modules.tracks.schemas import TrackRead, TrackUpdate, TrackUploadAccepte
 from yn.modules.tracks.service import TrackService
 from yn.modules.users.auth import get_current_user
 from yn.modules.users.dto import UserDTO
+from yn.shared.minio import get_minio_storage
 from yn.shared.pagination import PaginationParams, get_pagination_params
+from yn.shared.settings import settings
 
 router = APIRouter(prefix="/tracks", tags=["tracks"])
 
@@ -35,6 +39,26 @@ async def get_track_by_id(
 ) -> TrackRead:
     track = await track_service.get_track_by_id(track_id)
     return TrackRead.model_validate(track, from_attributes=True)
+
+
+@router.get("/{track_id:uuid}/stream")
+async def stream_track_by_id(
+    track_service: Annotated[TrackService, Depends(get_track_read_service)],
+    track_id: UUID,
+) -> StreamingResponse:
+    track = await track_service.get_track_by_id(track_id)
+    storage = get_minio_storage()
+
+    async def content() -> "AsyncIterator[bytes]":
+        async for chunk in storage.iter_object(settings.minio_bucket, track.path):
+            yield chunk
+
+    media_type = track.mime_type or "audio/mpeg"
+    return StreamingResponse(
+        content(),
+        media_type=media_type,
+        headers={"Content-Disposition": f'inline; filename="{track.path}"'},
+    )
 
 
 # Owner read
