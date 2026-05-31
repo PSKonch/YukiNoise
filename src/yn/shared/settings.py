@@ -55,6 +55,14 @@ class Settings(BaseSettings):
     def rabbitmq_management_url(self) -> str:
         return f"http://{self.rabbitmq_user}:{self.rabbitmq_password}@{self.rabbitmq_host}:{self.rabbitmq_managment_port}"
 
+    redis_host: str = "127.0.0.1"
+    redis_port: int = 6379
+    redis_db: int = 0
+
+    @property
+    def redis_url(self) -> str:
+        return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
+
     model_config = SettingsConfigDict(env_file=".env")
 
 

@@ -11,6 +11,7 @@ from yn.shared.database import Base
 
 if TYPE_CHECKING:
     from yn.modules.artists.model import Artist
+    from yn.modules.playback.model import PlaybackSessionEvent
 
 
 class User(Base):
@@ -41,4 +42,7 @@ class User(Base):
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan",
+    )
+    playback_sessions: Mapped[list["PlaybackSessionEvent"]] = relationship(
+        "PlaybackSessionEvent", back_populates="user", cascade="all, delete-orphan"
     )
