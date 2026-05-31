@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from yn.modules.artists.route import router as artists_router
+from yn.modules.playback.route import router as playback_router
 from yn.modules.playlists.route import router as playlists_router
 from yn.modules.posts.route import router as posts_router
 from yn.modules.releases.route import router as releases_router
@@ -72,6 +73,7 @@ register_exception_handlers(app)
 
 app.include_router(users_router)
 app.include_router(artists_router)
+app.include_router(playback_router)
 app.include_router(playlists_router)
 app.include_router(posts_router)
 app.include_router(releases_router)
