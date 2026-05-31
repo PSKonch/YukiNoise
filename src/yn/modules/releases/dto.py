@@ -47,6 +47,7 @@ class ReleaseWithTracksAndAuthorDTO:
     title: str
     description: str | None
     cover_path: str | None
+    release_type: str
     status: str
     release_date: datetime | None
     author_name: str | None
@@ -68,6 +69,7 @@ class ReleaseWithTracksAndAuthorDTO:
             title=release.title,
             description=getattr(release, "description", None),
             cover_path=getattr(release, "cover_path", None),
+            release_type=release.release_type,
             status=getattr(release, "status", "draft"),
             release_date=getattr(release, "release_date", None),
             author_name=getattr(artist, "displayed_name", None),
