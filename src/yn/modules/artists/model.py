@@ -12,6 +12,7 @@ from yn.shared.database import Base
 
 if TYPE_CHECKING:
     from yn.modules.commentaries.model import Commentary
+    from yn.modules.follows.model import Follow
     from yn.modules.playlists.model import Playlist
     from yn.modules.posts.model import Post
     from yn.modules.releases.model import Release
@@ -79,4 +80,18 @@ class Artist(Base):
     )
     commentaries: Mapped[list["Commentary"]] = relationship(
         "Commentary", back_populates="artist"
+    )
+    followers: Mapped[list["Follow"]] = relationship(
+        "Follow",
+        foreign_keys="[Follow.followed_id]",
+        back_populates="followed_artist",
+        cascade="all, delete-orphan",
+        lazy="selectin",  # или dynamic / joined — на твой вкус
+    )
+    following: Mapped[list["Follow"]] = relationship(
+        "Follow",
+        foreign_keys="[Follow.follower_id]",
+        back_populates="follower_artist",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
