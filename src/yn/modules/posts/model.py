@@ -12,6 +12,7 @@ from yn.shared.database import Base
 
 if TYPE_CHECKING:
     from yn.modules.artists.model import Artist
+    from yn.modules.commentaries.model import Commentary
 
 
 class Post(Base):
@@ -57,3 +58,6 @@ class Post(Base):
 
     # relationships
     artist: Mapped["Artist"] = relationship("Artist", back_populates="posts")
+    commentaries: Mapped[list["Commentary"]] = relationship(
+        "Commentary", back_populates="post"
+    )

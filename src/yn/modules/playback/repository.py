@@ -1,5 +1,4 @@
-from collections.abc import Awaitable
-from typing import cast
+from typing import Awaitable, cast
 from uuid import UUID
 
 from redis.asyncio import Redis

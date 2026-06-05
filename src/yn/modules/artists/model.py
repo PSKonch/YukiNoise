@@ -11,6 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from yn.shared.database import Base
 
 if TYPE_CHECKING:
+    from yn.modules.commentaries.model import Commentary
     from yn.modules.playlists.model import Playlist
     from yn.modules.posts.model import Post
     from yn.modules.releases.model import Release
@@ -75,4 +76,7 @@ class Artist(Base):
     releases: Mapped[list["Release"]] = relationship("Release", back_populates="artist")
     playlists: Mapped[list["Playlist"]] = relationship(
         "Playlist", back_populates="artist"
+    )
+    commentaries: Mapped[list["Commentary"]] = relationship(
+        "Commentary", back_populates="artist"
     )
