@@ -13,6 +13,7 @@ from yn.shared.database import Base
 if TYPE_CHECKING:
     from yn.modules.commentaries.model import Commentary
     from yn.modules.follows.model import Follow
+    from yn.modules.likes.model import Like
     from yn.modules.playlists.model import Playlist
     from yn.modules.posts.model import Post
     from yn.modules.releases.model import Release
@@ -95,3 +96,4 @@ class Artist(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    likes: Mapped[list["Like"]] = relationship("Like", back_populates="artist")

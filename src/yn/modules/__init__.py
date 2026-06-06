@@ -1,6 +1,7 @@
 from yn.modules.artists.model import Artist
 from yn.modules.commentaries.model import Commentary
 from yn.modules.follows.model import Follow
+from yn.modules.likes.model import Like
 from yn.modules.playback.model import PlaybackSessionEvent
 from yn.modules.playlists.model import Playlist, PlaylistTrack
 from yn.modules.posts.model import Post
@@ -12,6 +13,7 @@ __all__ = [
     "Post",
     "Artist",
     "User",
+    "Like",
     "Follow",
     "Release",
     "Track",
