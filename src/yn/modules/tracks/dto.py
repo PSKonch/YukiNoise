@@ -15,6 +15,7 @@ class TrackDTO:
     duration_seconds: int
     track_number_in_release: int
     path: str
+    mime_type: str | None
     genres: list[str]
     created_at: datetime | None
     deleted_at: datetime | None
@@ -28,6 +29,7 @@ class TrackDTO:
             duration_seconds=track.duration_seconds,
             track_number_in_release=track.track_number_in_release,
             path=track.path,
+            mime_type=getattr(track, "mime_type", None),
             genres=track.genres,
             created_at=getattr(track, "created_at", None),
             deleted_at=getattr(track, "deleted_at", None),

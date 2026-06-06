@@ -29,6 +29,9 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Frontend
+frontend
+
 # k8s secret files
 k8s/secret.yml
 

@@ -21,3 +21,4 @@ class PlaybackSessionResponse(BaseModel):
     position: int
     duration: int
     is_paused: bool
+    stream_url: str

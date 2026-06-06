@@ -1,5 +1,6 @@
 import asyncio
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any, AsyncIterator, BinaryIO
 
 from minio import Minio
@@ -84,6 +85,36 @@ class MinioStorage:
                     release_conn()
 
         return await asyncio.to_thread(read_object)
+
+    async def iter_object(
+        self, bucket: str, key: str, chunk_size: int = 64 * 1024
+    ) -> AsyncIterator[bytes]:
+        file = await asyncio.to_thread(self._client.get_object, bucket, key)
+
+        async def close_file() -> None:
+            await asyncio.to_thread(file.close)
+            release_conn = getattr(file, "release_conn", None)
+            if release_conn is not None:
+                await asyncio.to_thread(release_conn)
+
+        try:
+            while True:
+                chunk = await asyncio.to_thread(file.read, chunk_size)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            await close_file()
+
+    async def presigned_get_object(
+        self, bucket: str, key: str, expires_seconds: int = 3600
+    ) -> str:
+        return await asyncio.to_thread(
+            self._client.presigned_get_object,
+            bucket,
+            key,
+            expires=timedelta(seconds=expires_seconds),
+        )
 
     async def delete(self, bucket: str, key: str) -> None:
         await asyncio.to_thread(self._client.remove_object, bucket, key)

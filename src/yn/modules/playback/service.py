@@ -1,11 +1,15 @@
 import time
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from yn.modules.playback.errors import PlaybackNotFoundError, TrackNotFoundError
 from yn.modules.playback.repository import PlaybackRepository
 from yn.modules.playback.schemas import PlaybackSessionResponse
 from yn.shared.unit_of_work import UnitOfWork
+
+if TYPE_CHECKING:
+    from yn.modules.tracks.model import Track
 
 
 @dataclass(slots=True)
@@ -43,7 +47,11 @@ class PlaybackState:
 
 
 class PlaybackService:
-    def __init__(self, uow: UnitOfWork, playback_repository: PlaybackRepository):
+    def __init__(
+        self,
+        uow: UnitOfWork,
+        playback_repository: PlaybackRepository,
+    ):
         self.uow = uow
         self.playback_repository = playback_repository
 
@@ -173,7 +181,18 @@ class PlaybackService:
             position=position,
             duration=state.duration,
             is_paused=bool(state.is_paused),
+            stream_url=self._build_stream_url(state.track_id),
         )
+
+    async def _get_track_for_state(self, track_id: UUID) -> "Track":
+        track = await self.uow.tracks.get_track_by_id(track_id)
+        if track is None:
+            raise TrackNotFoundError
+        return track
+
+    @staticmethod
+    def _build_stream_url(track_id: UUID) -> str:
+        return f"/tracks/{track_id}/stream"
 
     @staticmethod
     def _now() -> int:
