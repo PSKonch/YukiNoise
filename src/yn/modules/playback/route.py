@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
+from yn.modules.auth.auth import get_current_user
 from yn.modules.playback.deps import get_playback_service
 from yn.modules.playback.schemas import (
     PlaybackSeekRequest,
@@ -9,7 +10,6 @@ from yn.modules.playback.schemas import (
     PlaybackStartRequest,
 )
 from yn.modules.playback.service import PlaybackService
-from yn.modules.users.auth import get_current_user
 from yn.modules.users.dto import UserDTO
 
 router = APIRouter(prefix="/playback", tags=["playback"])

@@ -103,6 +103,8 @@ services:
         condition: service_started
       grafana:
         condition: service_started
+      redis:
+        condition: service_started
     environment:
       POSTGRES_PRIMARY_USER: postgres
       POSTGRES_PRIMARY_PASSWORD: postgres
@@ -124,6 +126,9 @@ services:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_USER: guest
       RABBITMQ_PASSWORD: guest
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
       UPLOAD_TEMP_DIR: /tmp/yukinoise/uploads
     ports:
       - "8000:8000"

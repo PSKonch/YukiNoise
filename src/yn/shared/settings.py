@@ -28,9 +28,7 @@ class Settings(BaseSettings):
 
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
     refresh_token_expire_minutes: int = 60 * 24 * 30  # 30 days
-    secret_key: str = (
-        "your-secret-key"  # Change this to a secure random key in production
-    )
+    secret_key: str = "development-only-secret-key-change-me"
     algorithm: str = "HS256"
 
     minio_endpoint: str = "127.0.0.1:9000"
@@ -58,6 +56,7 @@ class Settings(BaseSettings):
     redis_host: str = "127.0.0.1"
     redis_port: int = 6379
     redis_db: int = 0
+    artists_cache_ttl_seconds: int = 300
 
     @property
     def redis_url(self) -> str:

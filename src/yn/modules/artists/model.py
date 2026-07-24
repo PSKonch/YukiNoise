@@ -87,7 +87,7 @@ class Artist(Base):
         foreign_keys="[Follow.followed_id]",
         back_populates="followed_artist",
         cascade="all, delete-orphan",
-        lazy="selectin",  # или dynamic / joined — на твой вкус
+        lazy="selectin",
     )
     following: Mapped[list["Follow"]] = relationship(
         "Follow",

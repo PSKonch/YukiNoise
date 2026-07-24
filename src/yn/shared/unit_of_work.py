@@ -7,6 +7,7 @@ from yn.shared.database import get_primary_session, get_replica_session
 
 if TYPE_CHECKING:
     from yn.modules.artists.repository import ArtistRepository
+    from yn.modules.auth.repository import RefreshTokenRepository
     from yn.modules.playlists.repository import PlaylistsRepository
     from yn.modules.posts.repository import PostRepository
     from yn.modules.releases.repository import ReleaseRepository
@@ -19,6 +20,7 @@ class UnitOfWork:
         self._session = session
         self._users_repo: "UserRepository | None" = None
         self._artists_repo: "ArtistRepository | None" = None
+        self._refresh_tokens_repo: "RefreshTokenRepository | None" = None
         self._playlists_repo: "PlaylistsRepository | None" = None
         self._posts_repo: "PostRepository | None" = None
         self._releases_repo: "ReleaseRepository | None" = None
@@ -43,6 +45,16 @@ class UnitOfWork:
             ArtistRepository = getattr(repo_mod, "ArtistRepository")
             self._artists_repo = ArtistRepository(self._session)
         return self._artists_repo
+
+    @property
+    def refresh_tokens(self) -> "RefreshTokenRepository":
+        if self._refresh_tokens_repo is None:
+            from importlib import import_module
+
+            repo_mod = import_module("yn.modules.auth.repository")
+            RefreshTokenRepository = getattr(repo_mod, "RefreshTokenRepository")
+            self._refresh_tokens_repo = RefreshTokenRepository(self._session)
+        return self._refresh_tokens_repo
 
     @property
     def playlists(self) -> "PlaylistsRepository":
