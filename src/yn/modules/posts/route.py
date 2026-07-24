@@ -4,13 +4,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 
 from yn.modules.artists.errors import ArtistNotFoundError
+from yn.modules.auth.auth import get_current_user
 from yn.modules.posts.deps import get_post_read_service, get_post_service
 from yn.modules.posts.errors import (
     EmptyPostUpdateError,
 )
 from yn.modules.posts.schemas import PostCreate, PostRead, PostUpdate
 from yn.modules.posts.service import PostService
-from yn.modules.users.auth import get_current_user
 from yn.modules.users.dto import UserDTO
 from yn.shared.pagination import PaginationParams, get_pagination_params
 

@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 
 from yn.modules.artists.errors import ArtistNotFoundError
+from yn.modules.auth.auth import get_current_user
 from yn.modules.playlists.deps import get_playlist_read_service, get_playlist_service
 from yn.modules.playlists.errors import EmptyPlaylistUpdateError
 from yn.modules.playlists.schemas import (
@@ -13,7 +14,6 @@ from yn.modules.playlists.schemas import (
     PlaylistUpdate,
 )
 from yn.modules.playlists.service import PlaylistService
-from yn.modules.users.auth import get_current_user
 from yn.modules.users.dto import UserDTO
 from yn.shared.pagination import PaginationParams, get_pagination_params
 

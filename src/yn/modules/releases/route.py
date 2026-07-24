@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, UploadFile
 
 from yn.modules.artists.errors import ArtistNotFoundError
+from yn.modules.auth.auth import get_current_user
 from yn.modules.releases.cover_uploader import (
     ReleaseCoverUploadPayload,
     build_release_cover_storage_key,
@@ -19,7 +20,6 @@ from yn.modules.releases.schemas import (
     ReleaseWithTracksAndAuthorRead,
 )
 from yn.modules.releases.service import ReleaseService
-from yn.modules.users.auth import get_current_user
 from yn.modules.users.dto import UserDTO
 from yn.shared.pagination import PaginationParams, get_pagination_params
 from yn.tasks.release_cover_upload import process_release_cover_upload

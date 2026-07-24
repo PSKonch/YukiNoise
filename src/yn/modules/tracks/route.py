@@ -6,11 +6,11 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import StreamingResponse
 
 from yn.modules.artists.errors import ArtistNotFoundError
+from yn.modules.auth.auth import get_current_user
 from yn.modules.tracks.deps import get_track_read_service, get_track_service
 from yn.modules.tracks.errors import EmptyTrackUpdateError
 from yn.modules.tracks.schemas import TrackRead, TrackUpdate, TrackUploadAccepted
 from yn.modules.tracks.service import TrackService
-from yn.modules.users.auth import get_current_user
 from yn.modules.users.dto import UserDTO
 from yn.shared.minio import get_minio_storage
 from yn.shared.pagination import PaginationParams, get_pagination_params

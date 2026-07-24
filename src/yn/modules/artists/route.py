@@ -10,11 +10,11 @@ from yn.modules.artists.errors import (
 )
 from yn.modules.artists.schemas import ArtistCreate, ArtistRead, ArtistUpdate
 from yn.modules.artists.service import ArtistService
+from yn.modules.auth.auth import get_current_user
 from yn.modules.playlists.schemas import PlaylistRead
 from yn.modules.posts.schemas import PostRead
 from yn.modules.releases.schemas import ReleaseRead
 from yn.modules.tracks.schemas import TrackRead
-from yn.modules.users.auth import get_current_user
 from yn.modules.users.dto import UserDTO
 from yn.shared.pagination import PaginationParams, get_pagination_params
 
