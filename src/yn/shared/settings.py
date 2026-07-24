@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     redis_host: str = "127.0.0.1"
     redis_port: int = 6379
     redis_db: int = 0
+    artists_cache_ttl_seconds: int = 300
 
     @property
     def redis_url(self) -> str:

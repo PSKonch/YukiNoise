@@ -10,12 +10,15 @@ from yn.modules.playlists.dto import PlaylistDTO
 from yn.modules.posts.dto import PostDTO
 from yn.modules.releases.dto import ReleaseDTO
 from yn.modules.tracks.dto import TrackDTO
+from yn.shared.cache.redis_cache import RedisCache
+from yn.shared.settings import settings
 from yn.shared.unit_of_work import UnitOfWork
 
 
 class ArtistService:
-    def __init__(self, uow: UnitOfWork):
+    def __init__(self, uow: UnitOfWork, cache: RedisCache):
         self.uow = uow
+        self.cache = cache
 
     # Public read
     async def get_all_artists(self, *, limit: int, offset: int) -> list[ArtistDTO]:
@@ -23,8 +26,26 @@ class ArtistService:
         return [ArtistDTO.from_orm(artist) for artist in artists]
 
     async def get_artist_by_id(self, artist_id: UUID) -> ArtistDTO | None:
+        cache_key = self._artist_cache_key(artist_id)
+        cached = await self.cache.get("artists", cache_key)
+        if cached is not None:
+            try:
+                return ArtistDTO.from_cache(cached)
+            except (KeyError, TypeError, ValueError):
+                await self.cache.delete("artists", cache_key)
+
         artist = await self.uow.artists.get_artist_by_id(artist_id)
-        return ArtistDTO.from_orm(artist) if artist else None
+        if artist is None:
+            return None
+
+        dto = ArtistDTO.from_orm(artist)
+        await self.cache.set(
+            "artists",
+            cache_key,
+            dto.to_cache(),
+            expire=settings.artists_cache_ttl_seconds,
+        )
+        return dto
 
     async def get_artist_by_displayed_name(
         self, displayed_name: str
@@ -184,12 +205,27 @@ class ArtistService:
         bio: str | None = None,
         social_links: dict[str, str] | None = None,
     ) -> bool:
-        return await self.uow.artists.update(
+        artist = await self.uow.artists.get_artist_by_user_id(user_id)
+        updated = await self.uow.artists.update(
             user_id=user_id,
             displayed_name=displayed_name,
             bio=bio,
             social_links=social_links,
         )
+        if updated and artist is not None:
+            await self._invalidate_artist(artist.id)
+        return updated
 
     async def hard_delete_artist(self, user_id: UUID) -> bool:
-        return await self.uow.artists.hard_delete_artist(user_id)
+        artist = await self.uow.artists.get_artist_by_user_id(user_id)
+        deleted = await self.uow.artists.hard_delete_artist(user_id)
+        if deleted and artist is not None:
+            await self._invalidate_artist(artist.id)
+        return deleted
+
+    @staticmethod
+    def _artist_cache_key(artist_id: UUID) -> str:
+        return f"by-id:{artist_id}"
+
+    async def _invalidate_artist(self, artist_id: UUID) -> None:
+        await self.cache.delete("artists", self._artist_cache_key(artist_id))
