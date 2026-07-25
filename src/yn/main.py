@@ -2,7 +2,8 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, status
+from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 from redis.asyncio import Redis
 
@@ -15,6 +16,7 @@ from yn.modules.releases.route import router as releases_router
 from yn.modules.tracks.route import router as tracks_router
 from yn.modules.users.route import router as users_router
 from yn.shared.cache.redis_cache import RedisCache, set_redis_cache
+from yn.shared.database import get_replica_status
 from yn.shared.errors import register_exception_handlers
 from yn.shared.minio import MinioStorage, set_minio_storage
 from yn.shared.redis_manager import RedisManager
@@ -90,6 +92,44 @@ app.include_router(playlists_router)
 app.include_router(posts_router)
 app.include_router(releases_router)
 app.include_router(tracks_router)
+
+
+@app.get("/health/live")
+async def liveness_check() -> dict[str, str]:
+    """Report whether the HTTP process is running."""
+    return {"status": "ok"}
+
+
+@app.get("/health/ready")
+async def readiness_check() -> JSONResponse:
+    """Fail readiness when the read replica is unavailable, stale, or promoted."""
+    try:
+        replica_status = await get_replica_status()
+    except Exception:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "unavailable", "replica": "unreachable"},
+        )
+
+    is_healthy = (
+        replica_status.is_replica
+        and replica_status.lag_bytes is not None
+        and replica_status.lag_bytes <= settings.replica_lag_threshold_bytes
+    )
+    response_status = (
+        status.HTTP_200_OK if is_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
+    )
+    return JSONResponse(
+        status_code=response_status,
+        content={
+            "status": "ok" if is_healthy else "unavailable",
+            "replica": {
+                "is_replica": replica_status.is_replica,
+                "lag_bytes": replica_status.lag_bytes,
+                "lag_threshold_bytes": settings.replica_lag_threshold_bytes,
+            },
+        },
+    )
 
 
 @app.get("/")
