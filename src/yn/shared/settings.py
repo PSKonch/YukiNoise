@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     postgres_replica_host: str = "127.0.0.1"
     postgres_replica_port: int = 5433
     postgres_replica_db: str = "yukinoise"
+    replica_lag_threshold_bytes: int = 16 * 1024 * 1024
 
     @property
     def postgres_replica_url(self) -> str:
