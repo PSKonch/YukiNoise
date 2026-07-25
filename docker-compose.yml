@@ -171,6 +171,17 @@ services:
       - track_upload_tmp:/tmp/yukinoise/uploads
     command: uvicorn yn.main:app --host 0.0.0.0 --port 8000 --reload
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_started
+    ports:
+      - "5173:80"
+
   worker:
     build:
       context: .

@@ -29,8 +29,11 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Frontend
-frontend
+# Frontend build artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
+frontend/
 
 # k8s secret files
 k8s/secret.yml

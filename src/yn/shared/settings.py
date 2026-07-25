@@ -26,6 +26,13 @@ class Settings(BaseSettings):
     app_host: str = "127.0.0.1"
     app_port: int = 8000
     app_workers: int = 4
+    cors_origins: str = "http://localhost:5173"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [
+            origin.strip() for origin in self.cors_origins.split(",") if origin.strip()
+        ]
 
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
     refresh_token_expire_minutes: int = 60 * 24 * 30  # 30 days

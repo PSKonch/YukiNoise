@@ -7,7 +7,7 @@ from redis.asyncio import Redis
 from yn.modules.playback.repository import PlaybackRepository
 from yn.modules.playback.service import PlaybackService
 from yn.shared.settings import settings
-from yn.shared.unit_of_work import UnitOfWork, get_read_uow
+from yn.shared.unit_of_work import UnitOfWork, get_uow
 
 
 @lru_cache
@@ -20,9 +20,7 @@ def get_playback_repository() -> PlaybackRepository:
 
 
 def get_playback_service(
-    uow: Annotated[UnitOfWork, Depends(get_read_uow)],
-    playback_repository: Annotated[
-        PlaybackRepository, Depends(get_playback_repository)
-    ],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+    repository: Annotated[PlaybackRepository, Depends(get_playback_repository)],
 ) -> PlaybackService:
-    return PlaybackService(uow, playback_repository)
+    return PlaybackService(uow=uow, repository=repository)

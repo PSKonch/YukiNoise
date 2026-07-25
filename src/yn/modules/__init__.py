@@ -3,7 +3,6 @@ from yn.modules.commentaries.model import Commentary
 from yn.modules.follows.model import Follow
 from yn.modules.likes.model import Like
 from yn.modules.notifications.model import Notification
-from yn.modules.playback.model import PlaybackSessionEvent
 from yn.modules.playlists.model import Playlist, PlaylistTrack
 from yn.modules.posts.model import Post
 from yn.modules.releases.model import Release
@@ -21,6 +20,5 @@ __all__ = [
     "Track",
     "Playlist",
     "PlaylistTrack",
-    "PlaybackSessionEvent",
     "Commentary",
 ]

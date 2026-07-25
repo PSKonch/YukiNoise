@@ -55,6 +55,32 @@ class TrackRepository:
         result = await self._session.execute(stmt)
         return result.scalars().all()
 
+    async def get_public_tracks_for_release(self, release_id: UUID) -> Sequence[Track]:
+        stmt = (
+            select(self.model)
+            .join(self.model.release)
+            .where(
+                and_(
+                    self.model.release_id == release_id,
+                    self.model.deleted_at.is_(None),
+                    Release.publicly_visible_clause(),
+                )
+            )
+            .order_by(self.model.track_number_in_release.asc(), self.model.id.asc())
+        )
+        result = await self._session.execute(stmt)
+        return result.scalars().all()
+
+    async def increment_play_count(self, track_id: UUID) -> bool:
+        stmt = (
+            update(self.model)
+            .where(and_(self.model.id == track_id, self.model.deleted_at.is_(None)))
+            .values(play_count=self.model.play_count + 1)
+            .returning(self.model.id)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none() is not None
+
     async def trgm_search_by_title(self, search_term: str) -> Sequence[Track]:
         stmt = (
             select(self.model)

@@ -106,6 +106,40 @@ class MinioStorage:
         finally:
             await close_file()
 
+    async def stat(self, bucket: str, key: str) -> StorageObject:
+        result = await asyncio.to_thread(self._client.stat_object, bucket, key)
+        return StorageObject(key=key, size=int(result.size or 0))
+
+    async def iter_object_range(
+        self,
+        bucket: str,
+        key: str,
+        *,
+        offset: int,
+        length: int,
+        chunk_size: int = 64 * 1024,
+    ) -> AsyncIterator[bytes]:
+        file = await asyncio.to_thread(
+            self._client.get_object,
+            bucket,
+            key,
+            offset=offset,
+            length=length,
+        )
+        remaining = length
+        try:
+            while remaining > 0:
+                chunk = await asyncio.to_thread(file.read, min(chunk_size, remaining))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+                yield chunk
+        finally:
+            await asyncio.to_thread(file.close)
+            release_conn = getattr(file, "release_conn", None)
+            if release_conn is not None:
+                await asyncio.to_thread(release_conn)
+
     async def presigned_get_object(
         self, bucket: str, key: str, expires_seconds: int = 3600
     ) -> str:
