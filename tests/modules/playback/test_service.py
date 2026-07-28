@@ -52,11 +52,16 @@ def service_with_tracks(
 ) -> tuple[PlaybackService, MemoryPlaybackRepository]:
     tracks = SimpleNamespace(
         get_public_tracks_for_release=lambda _: asyncio.sleep(0, result=items),
-        increment_play_count=lambda _: asyncio.sleep(0, result=True),
     )
     uow = SimpleNamespace(tracks=tracks, commit=lambda: asyncio.sleep(0))
     repository = MemoryPlaybackRepository()
-    return PlaybackService(cast(Any, uow), cast(Any, repository)), repository
+    play_counter_queue = SimpleNamespace(add=lambda _: asyncio.sleep(0))
+    return (
+        PlaybackService(
+            cast(Any, uow), cast(Any, repository), cast(Any, play_counter_queue)
+        ),
+        repository,
+    )
 
 
 def test_merge_intervals_counts_only_the_union() -> None:
@@ -106,14 +111,16 @@ def test_non_active_device_cannot_control_player() -> None:
 
 def test_disjoint_halves_count_once() -> None:
     item = track(1, duration_seconds=120)
-    increment = AsyncMock(return_value=True)
+    add_play_count = AsyncMock()
     tracks = SimpleNamespace(
         get_public_tracks_for_release=lambda _: asyncio.sleep(0, result=[item]),
-        increment_play_count=increment,
     )
     uow = SimpleNamespace(tracks=tracks, commit=AsyncMock())
     repository = MemoryPlaybackRepository()
-    service = PlaybackService(cast(Any, uow), cast(Any, repository))
+    play_counter_queue = SimpleNamespace(add=add_play_count)
+    service = PlaybackService(
+        cast(Any, uow), cast(Any, repository), cast(Any, play_counter_queue)
+    )
     user_id, device_id = uuid4(), uuid4()
     initial = asyncio.run(
         service.play(
@@ -155,4 +162,4 @@ def test_disjoint_halves_count_once() -> None:
     )
     assert counted.listened_ms == 60_000
     assert counted.counted
-    increment.assert_awaited_once_with(item.id)
+    add_play_count.assert_awaited_once_with(item.id)

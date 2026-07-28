@@ -10,7 +10,10 @@ from redis.asyncio import Redis
 
 from yn.modules.artists.route import router as artists_router
 from yn.modules.auth.route import router as auth_router
-from yn.modules.playback.deps import get_playback_redis_client
+from yn.modules.playback.deps import (
+    get_playback_redis_client,
+    get_tracks_play_counter_queue,
+)
 from yn.modules.playback.route import router as playback_router
 from yn.modules.playlists.route import router as playlists_router
 from yn.modules.posts.route import router as posts_router
@@ -54,11 +57,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         print(f"Bucket '{settings.minio_bucket}' created successfully")
 
     await broker.startup()
+    play_counter_queue = get_tracks_play_counter_queue()
+    play_counter_queue.start()
 
     yield
 
     # Shutdown
     print("Shutting down...")
+    await play_counter_queue.stop()
     await broker.shutdown()
     await redis_manager.close()
     await get_playback_redis_client().aclose()

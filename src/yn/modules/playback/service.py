@@ -23,6 +23,7 @@ from yn.modules.playback.schemas import (
     RepeatMode,
 )
 from yn.modules.tracks.model import Track
+from yn.modules.tracks.tracks_play_counter_queue import TracksPlayCounterQueue
 from yn.shared.unit_of_work import UnitOfWork
 
 REJECTED_PROGRESS = Counter(
@@ -65,6 +66,7 @@ def covered_ms(intervals: Sequence[Sequence[int]]) -> int:
 class PlaybackService:
     uow: UnitOfWork
     repository: PlaybackRepository
+    play_counter_queue: TracksPlayCounterQueue
 
     async def get_current(self, user_id: UUID) -> PlaybackStateResponse | None:
         state = await self.repository.get(user_id)
@@ -249,25 +251,18 @@ class PlaybackService:
         await self._bump_and_save(user_id, state)
         if should_count:
             track_id = UUID(self._current_track(state)["id"])
-            count_committed = False
+            count_queued = False
             try:
-                updated = await self.uow.tracks.increment_play_count(track_id)
-                if updated:
-                    await self.uow.commit()
-                    count_committed = True
-                    COUNTED_PLAYS.inc()
-                    latest = await self._required(user_id)
-                    if latest["attempt_id"] == str(attempt_id):
-                        latest["count_status"] = "counted"
-                        await self._bump_and_save(user_id, latest)
-                        state = latest
-                else:
-                    latest = await self._required(user_id)
-                    if latest["attempt_id"] == str(attempt_id):
-                        latest["count_status"] = "uncounted"
-                        await self._bump_and_save(user_id, latest)
+                await self.play_counter_queue.add(track_id)
+                count_queued = True
+                COUNTED_PLAYS.inc()
+                latest = await self._required(user_id)
+                if latest["attempt_id"] == str(attempt_id):
+                    latest["count_status"] = "counted"
+                    await self._bump_and_save(user_id, latest)
+                    state = latest
             except Exception:
-                if not count_committed:
+                if not count_queued:
                     rollback_state = await self.repository.get(user_id)
                     if rollback_state and rollback_state["attempt_id"] == str(
                         attempt_id
