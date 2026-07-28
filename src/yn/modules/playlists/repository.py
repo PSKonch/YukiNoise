@@ -1,10 +1,11 @@
 from typing import Any, Sequence
 from uuid import UUID
 
-from sqlalchemy import and_, delete, func, literal, select, update
+from sqlalchemy import and_, delete, func, literal, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager, selectinload
+from sqlalchemy.sql.elements import ColumnElement
 
 from yn.modules.playlists.errors import (
     PlaylistAccessDeniedError,
@@ -111,6 +112,31 @@ class PlaylistsRepository:
             .order_by(self.auxiliary_model.added_at.asc())
             .limit(limit)
             .offset(offset)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalars().all()
+
+    async def get_accessible_playlist_tracks_for_playback(
+        self, playlist_id: UUID, artist_id: UUID | None
+    ) -> Sequence[Track]:
+        access_clause: ColumnElement[bool] = self.model.is_private.is_(False)
+        if artist_id is not None:
+            access_clause = or_(access_clause, self.model.artist_id == artist_id)
+        stmt = (
+            select(Track)
+            .join(self.auxiliary_model, self.auxiliary_model.track_id == Track.id)
+            .join(self.model, self.model.id == self.auxiliary_model.playlist_id)
+            .join(Track.release)
+            .where(
+                and_(
+                    self.model.id == playlist_id,
+                    self.model.deleted_at.is_(None),
+                    access_clause,
+                    Track.deleted_at.is_(None),
+                    Release.publicly_visible_clause(),
+                )
+            )
+            .order_by(self.auxiliary_model.added_at.asc(), Track.id.asc())
         )
         result = await self._session.execute(stmt)
         return result.scalars().all()

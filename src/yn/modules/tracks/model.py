@@ -11,7 +11,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from yn.shared.database import Base
 
 if TYPE_CHECKING:
-    from yn.modules.playback.model import PlaybackSessionEvent
     from yn.modules.playlists.model import PlaylistTrack
     from yn.modules.releases.model import Release
 
@@ -49,9 +48,6 @@ class Track(Base):
     release: Mapped["Release"] = relationship("Release", back_populates="tracks")
     playlists: Mapped[list["PlaylistTrack"]] = relationship(
         "PlaylistTrack", back_populates="track"
-    )
-    playback_sessions: Mapped[list["PlaybackSessionEvent"]] = relationship(
-        "PlaybackSessionEvent", back_populates="track", cascade="all, delete-orphan"
     )
 
     __table_args__ = (
