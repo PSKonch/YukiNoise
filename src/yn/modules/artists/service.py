@@ -12,13 +12,20 @@ from yn.modules.releases.dto import ReleaseDTO
 from yn.modules.tracks.dto import TrackDTO
 from yn.shared.cache.redis_cache import RedisCache
 from yn.shared.settings import settings
+from yn.shared.singleflight import SingleFlight
 from yn.shared.unit_of_work import UnitOfWork
 
 
 class ArtistService:
-    def __init__(self, uow: UnitOfWork, cache: RedisCache):
+    def __init__(
+        self,
+        uow: UnitOfWork,
+        cache: RedisCache,
+        singleflight: SingleFlight,
+    ) -> None:
         self.uow = uow
         self.cache = cache
+        self.singleflight = singleflight
 
     # Public read
     async def get_all_artists(self, *, limit: int, offset: int) -> list[ArtistDTO]:
@@ -34,18 +41,11 @@ class ArtistService:
             except (KeyError, TypeError, ValueError):
                 await self.cache.delete("artists", cache_key)
 
-        artist = await self.uow.artists.get_artist_by_id(artist_id)
-        if artist is None:
-            return None
-
-        dto = ArtistDTO.from_orm(artist)
-        await self.cache.set(
-            "artists",
+        artist = await self.singleflight.run(
             cache_key,
-            dto.to_cache(),
-            expire=settings.artists_cache_ttl_seconds,
+            lambda: self._get_artist_from_db_and_set_cache(artist_id),
         )
-        return dto
+        return artist
 
     async def get_artist_by_displayed_name(
         self, displayed_name: str
@@ -229,3 +229,19 @@ class ArtistService:
 
     async def _invalidate_artist(self, artist_id: UUID) -> None:
         await self.cache.delete("artists", self._artist_cache_key(artist_id))
+
+    async def _get_artist_from_db_and_set_cache(
+        self, artist_id: UUID
+    ) -> ArtistDTO | None:
+        artist = await self.uow.artists.get_artist_by_id(artist_id)
+        if artist is None:
+            return None
+
+        dto = ArtistDTO.from_orm(artist)
+        await self.cache.set(
+            "artists",
+            self._artist_cache_key(artist_id),
+            dto.to_cache(),
+            expire=settings.artists_cache_ttl_seconds,
+        )
+        return dto
