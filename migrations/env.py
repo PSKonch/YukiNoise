@@ -15,6 +15,7 @@ from yn.modules.auth import model as _auth_model  # noqa: F401
 from yn.modules.posts import model as _posts_model  # noqa: F401
 from yn.modules.users import model as _users_model  # noqa: F401
 from yn.shared.database import Base
+from yn.shared.outbox import model as _outbox_model  # noqa: F401
 from yn.shared.settings import settings
 
 # this is the Alembic Config object, which provides

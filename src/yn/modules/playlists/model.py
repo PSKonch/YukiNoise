@@ -4,7 +4,7 @@ from uuid import UUID as PyUUID
 from uuid import uuid4
 
 from sqlalchemy import UUID as SA_UUID
-from sqlalchemy import Enum, ForeignKey, Index, func
+from sqlalchemy import Enum, ForeignKey, Index, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from yn.modules.playlists.enums import PlaylistType
@@ -17,13 +17,22 @@ if TYPE_CHECKING:
 
 class Playlist(Base):
     __tablename__ = "playlists"
+    __table_args__ = (
+        Index(
+            "uq_playlists_artist_system_title",
+            "artist_id",
+            "title",
+            unique=True,
+            postgresql_where=text("playlist_type = 'SYSTEM'"),
+        ),
+    )
 
     id: Mapped[PyUUID] = mapped_column(
         SA_UUID(as_uuid=True), primary_key=True, default=uuid4
     )
     artist_id: Mapped[PyUUID] = mapped_column(
         SA_UUID(as_uuid=True),
-        ForeignKey("artists.id"),
+        ForeignKey("artists.id", ondelete="CASCADE"),
         nullable=False,
     )
     title: Mapped[str] = mapped_column(nullable=False)

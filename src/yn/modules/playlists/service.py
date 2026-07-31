@@ -99,6 +99,9 @@ class PlaylistService:
         )
         return PlaylistDTO.from_orm(playlist)
 
+    async def create_favs_playlist(self, artist_id: UUID) -> None:
+        await self.uow.playlists.create_system_favs(artist_id)
+
     async def update_playlist(
         self,
         *,

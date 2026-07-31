@@ -6,6 +6,11 @@ from yn.modules.artists.errors import (
     ArtistConflictError,
     ArtistDisplayedNameTakenError,
 )
+from yn.modules.artists.rmq.events import (
+    ARTIST_CREATED_ROUTING_KEY,
+    ARTIST_EVENTS_EXCHANGE,
+    ArtistCreatedEvent,
+)
 from yn.modules.playlists.dto import PlaylistDTO
 from yn.modules.posts.dto import PostDTO
 from yn.modules.releases.dto import ReleaseDTO
@@ -196,7 +201,17 @@ class ArtistService:
                 raise ArtistDisplayedNameTakenError from exc
             raise
 
-        return ArtistDTO.from_orm(artist)
+        artist_dto = ArtistDTO.from_orm(artist)
+        event = ArtistCreatedEvent(artist_id=artist.id)
+        await self.uow.outbox.add(
+            event_id=event.event_id,
+            event_type=event.event_type,
+            exchange=ARTIST_EVENTS_EXCHANGE,
+            routing_key=ARTIST_CREATED_ROUTING_KEY,
+            payload=event.model_dump(mode="json"),
+            occurred_at=event.occurred_at,
+        )
+        return artist_dto
 
     async def update_artist(
         self,
