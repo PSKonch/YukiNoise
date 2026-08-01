@@ -29,7 +29,9 @@ dependencies = [
     "minio (>=7.2.20,<8.0.0)",
     "taskiq (>=0.12.4,<0.13.0)",
     "taskiq-aio-pika (>=0.6.0,<0.7.0)",
-    "prometheus-fastapi-instrumentator (>=7.1.0,<8.0.0)"
+    "prometheus-fastapi-instrumentator (>=7.1.0,<8.0.0)",
+    "aiokafka (>=0.14.0,<0.15.0)",
+    "faststream[kafka] (>=0.7.3,<0.8.0)"
 ]
 
 [tool.poetry]
