@@ -1,12 +1,13 @@
 from typing import Any, Sequence
 from uuid import UUID
 
-from sqlalchemy import and_, delete, func, literal, or_, select, update
+from sqlalchemy import and_, delete, func, literal, or_, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager, selectinload
 from sqlalchemy.sql.elements import ColumnElement
 
+from yn.modules.playlists.enums import PlaylistType
 from yn.modules.playlists.errors import (
     PlaylistAccessDeniedError,
     PlaylistConflictError,
@@ -232,6 +233,22 @@ class PlaylistsRepository:
         )
         result = await self._session.execute(stmt)
         return result.scalar_one()
+
+    async def create_system_favs(self, artist_id: UUID) -> None:
+        stmt = (
+            pg_insert(self.model)
+            .values(
+                artist_id=artist_id,
+                title="favs",
+                is_private=True,
+                playlist_type=PlaylistType.SYSTEM,
+            )
+            .on_conflict_do_nothing(
+                index_elements=[self.model.artist_id, self.model.title],
+                index_where=text("playlist_type = 'SYSTEM'"),
+            )
+        )
+        await self._session.execute(stmt)
 
     async def insert_track(
         self,

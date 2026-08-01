@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     rabbitmq_user: str = "guest"
     rabbitmq_password: str = "guest"
     rabbitmq_managment_port: int = 15672
+    rabbitmq_publish_timeout_seconds: float = 5.0
+    outbox_batch_size: int = 50
+    outbox_poll_interval_seconds: float = 0.5
 
     @property
     def rabbitmq_url(self) -> str:
