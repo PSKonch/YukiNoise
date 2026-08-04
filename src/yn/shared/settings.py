@@ -52,9 +52,6 @@ class Settings(BaseSettings):
     rabbitmq_user: str = "guest"
     rabbitmq_password: str = "guest"
     rabbitmq_managment_port: int = 15672
-    rabbitmq_publish_timeout_seconds: float = 5.0
-    outbox_batch_size: int = 50
-    outbox_poll_interval_seconds: float = 0.5
 
     @property
     def rabbitmq_url(self) -> str:
@@ -63,6 +60,13 @@ class Settings(BaseSettings):
     @property
     def rabbitmq_management_url(self) -> str:
         return f"http://{self.rabbitmq_user}:{self.rabbitmq_password}@{self.rabbitmq_host}:{self.rabbitmq_managment_port}"
+
+    kafka_host: str = "127.0.0.1"
+    kafka_port: int = 9092
+
+    @property
+    def kafka_url(self) -> str:
+        return f"{self.kafka_host}:{self.kafka_port}"
 
     redis_host: str = "127.0.0.1"
     redis_port: int = 6379

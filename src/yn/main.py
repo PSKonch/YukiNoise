@@ -24,6 +24,7 @@ from yn.shared.cache.redis_cache import RedisCache, set_redis_cache
 from yn.shared.database import get_replica_status
 from yn.shared.errors import register_exception_handlers
 from yn.shared.minio import MinioStorage, set_minio_storage
+from yn.shared.publisher import kafka_broker
 from yn.shared.redis_manager import RedisManager
 from yn.shared.settings import settings
 from yn.tasks.broker import broker
@@ -49,6 +50,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     set_redis_cache(RedisCache(redis_manager))
 
+    await kafka_broker.start()
+
     # Create bucket if it doesn't exist
     if await minio_storage.bucket_exists(settings.minio_bucket):
         print(f"Bucket '{settings.minio_bucket}' already exists")
@@ -66,6 +69,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     print("Shutting down...")
     await play_counter_queue.stop()
     await broker.shutdown()
+    await kafka_broker.stop()
     await redis_manager.close()
     await get_playback_redis_client().aclose()
     set_redis_cache(None)
