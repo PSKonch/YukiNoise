@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     from yn.modules.releases.repository import ReleaseRepository
     from yn.modules.tracks.repository import TrackRepository
     from yn.modules.users.repository import UserRepository
-    from yn.shared.outbox.repository import OutboxRepository
 
 
 class UnitOfWork:
@@ -26,7 +25,6 @@ class UnitOfWork:
         self._posts_repo: "PostRepository | None" = None
         self._releases_repo: "ReleaseRepository | None" = None
         self._tracks_repo: "TrackRepository | None" = None
-        self._outbox_repo: "OutboxRepository | None" = None
 
     @property
     def users(self) -> "UserRepository":
@@ -97,14 +95,6 @@ class UnitOfWork:
             TrackRepository = getattr(repo_mod, "TrackRepository")
             self._tracks_repo = TrackRepository(self._session)
         return self._tracks_repo
-
-    @property
-    def outbox(self) -> "OutboxRepository":
-        if self._outbox_repo is None:
-            from yn.shared.outbox.repository import OutboxRepository
-
-            self._outbox_repo = OutboxRepository(self._session)
-        return self._outbox_repo
 
     async def __aenter__(self) -> "UnitOfWork":
         return self

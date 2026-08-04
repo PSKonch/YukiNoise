@@ -74,6 +74,61 @@ services:
       - "5672:5672"
       - "15672:15672"
 
+  kafka-init:
+    image: apache/kafka:4.3.1
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["chown -R 1000:1000 /var/lib/kafka-data"]
+    volumes:
+      - kafka_data:/var/lib/kafka-data
+
+  kafka:
+    image: apache/kafka:4.3.1
+    hostname: kafka
+    restart: unless-stopped
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: CONTROLLER://:29093,INTERNAL://:29092,EXTERNAL://:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_SHARE_COORDINATOR_STATE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_SHARE_COORDINATOR_STATE_TOPIC_MIN_ISR: 1
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+    volumes:
+      - kafka_data:/tmp/kraft-combined-logs
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    restart: unless-stopped
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    ports:
+      - "8080:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
+
   minio:
     image: minio/minio:latest
     restart: unless-stopped
@@ -138,6 +193,8 @@ services:
         condition: service_started
       redis:
         condition: service_started
+      kafka:
+        condition: service_healthy
     environment:
       POSTGRES_PRIMARY_USER: postgres
       POSTGRES_PRIMARY_PASSWORD: postgres
@@ -164,6 +221,8 @@ services:
       REDIS_DB: 0
       REPLICA_LAG_THRESHOLD_BYTES: 16777216
       UPLOAD_TEMP_DIR: /tmp/yukinoise/uploads
+      KAFKA_HOST: kafka
+      KAFKA_PORT: 29092
     ports:
       - "8000:8000"
     volumes:
@@ -215,6 +274,8 @@ services:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_USER: guest
       RABBITMQ_PASSWORD: guest
+      KAFKA_HOST: kafka
+      KAFKA_PORT: 29092
       UPLOAD_TEMP_DIR: /tmp/yukinoise/uploads
     volumes:
       - ./src:/opt/app/src
@@ -248,6 +309,8 @@ services:
       POSTGRES_REPLICA_HOST: db_replica
       POSTGRES_REPLICA_PORT: 5432
       MINIO_ENDPOINT: minio:9000
+      KAFKA_HOST: kafka
+      KAFKA_PORT: 29092
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
       MINIO_SECURE: "false"
@@ -265,4 +328,5 @@ volumes:
   postgres_replica_data:
   minio_data:
   track_upload_tmp:
+  kafka_data:
   redis_data:

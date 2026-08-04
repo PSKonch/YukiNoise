@@ -8,8 +8,6 @@ from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 from redis.asyncio import Redis
 
-from yn.modules.artists.rmq.events import ARTIST_EVENTS_EXCHANGE
-from yn.modules.artists.rmq.producer import ArtistEventsProducer
 from yn.modules.artists.route import router as artists_router
 from yn.modules.auth.route import router as auth_router
 from yn.modules.playback.deps import (
@@ -17,17 +15,16 @@ from yn.modules.playback.deps import (
     get_tracks_play_counter_queue,
 )
 from yn.modules.playback.route import router as playback_router
-from yn.modules.playlists.rmq.consumer import ArtistEventsConsumer
 from yn.modules.playlists.route import router as playlists_router
 from yn.modules.posts.route import router as posts_router
 from yn.modules.releases.route import router as releases_router
 from yn.modules.tracks.route import router as tracks_router
 from yn.modules.users.route import router as users_router
 from yn.shared.cache.redis_cache import RedisCache, set_redis_cache
-from yn.shared.database import async_primary_session, get_replica_status
+from yn.shared.database import get_replica_status
 from yn.shared.errors import register_exception_handlers
 from yn.shared.minio import MinioStorage, set_minio_storage
-from yn.shared.outbox.publisher import OutboxPublisher
+from yn.shared.publisher import kafka_broker
 from yn.shared.redis_manager import RedisManager
 from yn.shared.settings import settings
 from yn.tasks.broker import broker
@@ -53,21 +50,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     set_redis_cache(RedisCache(redis_manager))
 
-    artist_events_consumer = ArtistEventsConsumer(settings.rabbitmq_url)
-    await artist_events_consumer.start()
-    artist_events_producer = ArtistEventsProducer(
-        settings.rabbitmq_url,
-        publish_timeout=settings.rabbitmq_publish_timeout_seconds,
-    )
-    await artist_events_producer.start()
-    outbox_publisher = OutboxPublisher(
-        async_primary_session,
-        artist_events_producer.publish,
-        exchange=ARTIST_EVENTS_EXCHANGE,
-        batch_size=settings.outbox_batch_size,
-        poll_interval=settings.outbox_poll_interval_seconds,
-    )
-    outbox_publisher.start()
+    await kafka_broker.start()
 
     # Create bucket if it doesn't exist
     if await minio_storage.bucket_exists(settings.minio_bucket):
@@ -85,10 +68,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Shutdown
     print("Shutting down...")
     await play_counter_queue.stop()
-    await outbox_publisher.stop()
-    await artist_events_producer.stop()
-    await artist_events_consumer.stop()
     await broker.shutdown()
+    await kafka_broker.stop()
     await redis_manager.close()
     await get_playback_redis_client().aclose()
     set_redis_cache(None)

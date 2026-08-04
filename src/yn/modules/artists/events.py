@@ -4,9 +4,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
-ARTIST_EVENTS_EXCHANGE = "artists.events"
-ARTIST_CREATED_QUEUE = "playlists.artist-created"
-ARTIST_CREATED_ROUTING_KEY = "artist.created.v1"
+ARTIST_EVENTS_TOPIC = "artists.events"
 
 
 class ArtistCreatedEvent(BaseModel):
@@ -14,4 +12,6 @@ class ArtistCreatedEvent(BaseModel):
     event_type: Literal["artist.created"] = "artist.created"
     version: Literal[1] = 1
     artist_id: UUID
+    user_id: UUID
+    displayed_name: str
     occurred_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

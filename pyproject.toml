@@ -51,7 +51,7 @@ exclude = [
 explicit_package_bases = true
 
 [[tool.mypy.overrides]]
-module = ["hvac.*", "asyncssh.*"]
+module = ["hvac.*", "asyncssh.*", "aiokafka.*"]
 ignore_missing_imports = true
 
 [tool.ruff.lint]

@@ -6,16 +6,13 @@ from yn.modules.artists.errors import (
     ArtistConflictError,
     ArtistDisplayedNameTakenError,
 )
-from yn.modules.artists.rmq.events import (
-    ARTIST_CREATED_ROUTING_KEY,
-    ARTIST_EVENTS_EXCHANGE,
-    ArtistCreatedEvent,
-)
+from yn.modules.artists.events import ArtistCreatedEvent
 from yn.modules.playlists.dto import PlaylistDTO
 from yn.modules.posts.dto import PostDTO
 from yn.modules.releases.dto import ReleaseDTO
 from yn.modules.tracks.dto import TrackDTO
 from yn.shared.cache.redis_cache import RedisCache
+from yn.shared.publisher import KafkaPublisher
 from yn.shared.settings import settings
 from yn.shared.singleflight import SingleFlight
 from yn.shared.unit_of_work import UnitOfWork
@@ -27,10 +24,12 @@ class ArtistService:
         uow: UnitOfWork,
         cache: RedisCache,
         singleflight: SingleFlight,
+        kafka_publisher: KafkaPublisher,
     ) -> None:
         self.uow = uow
         self.cache = cache
         self.singleflight = singleflight
+        self.kafka_publisher = kafka_publisher
 
     # Public read
     async def get_all_artists(self, *, limit: int, offset: int) -> list[ArtistDTO]:
@@ -202,14 +201,19 @@ class ArtistService:
             raise
 
         artist_dto = ArtistDTO.from_orm(artist)
-        event = ArtistCreatedEvent(artist_id=artist.id)
-        await self.uow.outbox.add(
-            event_id=event.event_id,
-            event_type=event.event_type,
-            exchange=ARTIST_EVENTS_EXCHANGE,
-            routing_key=ARTIST_CREATED_ROUTING_KEY,
-            payload=event.model_dump(mode="json"),
-            occurred_at=event.occurred_at,
+        event = ArtistCreatedEvent(
+            artist_id=artist_dto.id,
+            user_id=artist_dto.user_id,
+            displayed_name=artist_dto.displayed_name,
+        )
+        await self.kafka_publisher.publish(
+            event,
+            key=event.artist_id,
+            headers={
+                "event-type": event.event_type,
+                "event-version": str(event.version),
+            },
+            correlation_id=str(event.event_id),
         )
         return artist_dto
 
