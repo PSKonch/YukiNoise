@@ -15,6 +15,7 @@ from yn.modules.playback.deps import (
     get_tracks_play_counter_queue,
 )
 from yn.modules.playback.route import router as playback_router
+from yn.modules.playlists.kafka import router as playlists_kafka_router
 from yn.modules.playlists.route import router as playlists_router
 from yn.modules.posts.route import router as posts_router
 from yn.modules.releases.route import router as releases_router
@@ -28,6 +29,8 @@ from yn.shared.publisher import kafka_broker
 from yn.shared.redis_manager import RedisManager
 from yn.shared.settings import settings
 from yn.tasks.broker import broker
+
+kafka_broker.include_router(playlists_kafka_router)
 
 
 @asynccontextmanager
