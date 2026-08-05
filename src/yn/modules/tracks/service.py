@@ -153,6 +153,7 @@ class TrackService:
         )
         if updated is None:
             raise TrackNotFoundError
+        await self.uow.commit()
         return TrackDTO.from_orm(updated)
 
     async def delete_track(self, track_id: UUID, artist_id: UUID) -> None:
@@ -167,6 +168,7 @@ class TrackService:
         )
         if not deleted:
             raise TrackNotFoundError
+        await self.uow.commit()
 
     # Validation helpers
     async def _ensure_track_is_available(

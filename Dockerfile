@@ -10,7 +10,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /opt/app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential cargo libpq-dev \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        cargo \
+        ffmpeg \
+        libpq-dev \
     && pip install --no-cache-dir "poetry==${POETRY_VERSION}" \
     && rm -rf /var/lib/apt/lists/*
 

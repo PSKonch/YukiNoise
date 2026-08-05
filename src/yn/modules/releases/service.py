@@ -154,6 +154,7 @@ class ReleaseService:
             cover_path=cover_path,
             release_type=release_type,
         )
+        await self.uow.commit()
         return ReleaseDTO.from_orm(release)
 
     async def update_description_of_release(
@@ -174,6 +175,7 @@ class ReleaseService:
                 expected_status=ReleaseStatus.DRAFT,
             )
             raise ReleaseNotFoundError
+        await self.uow.commit()
         return ReleaseDTO.from_orm(updated_release)
 
     async def schedule_release(
@@ -197,6 +199,7 @@ class ReleaseService:
                 expected_status=ReleaseStatus.DRAFT,
             )
             raise ReleaseNotFoundError
+        await self.uow.commit()
         return ReleaseDTO.from_orm(updated_release)
 
     async def unschedule_release(
@@ -216,6 +219,7 @@ class ReleaseService:
                 expected_status=ReleaseStatus.SCHEDULED,
             )
             raise ReleaseNotFoundError
+        await self.uow.commit()
         return ReleaseDTO.from_orm(updated_release)
 
     async def upload_release_cover(
@@ -243,6 +247,8 @@ class ReleaseService:
                 artist_id=artist_id,
                 cover_path=cover_path,
             )
+            if updated_release is not None:
+                await self.uow.commit()
         except Exception as exc:
             await self._safe_delete_cover(cover_path)
             raise ReleaseCoverUploadFailedError from exc

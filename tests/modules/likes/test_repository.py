@@ -1,6 +1,5 @@
 import asyncio
 from collections.abc import Callable
-from datetime import datetime
 from types import SimpleNamespace
 from typing import cast
 from unittest.mock import AsyncMock
@@ -39,13 +38,7 @@ def test_like_insert_is_idempotent() -> None:
 
 def test_track_like_updates_counter_only_after_insert() -> None:
     async def run() -> None:
-        like = Like(
-            id=uuid4(),
-            artist_id=uuid4(),
-            target_type=TargetType.TRACK,
-            target_id=uuid4(),
-            created_at=datetime.now(),
-        )
+        like = cast(Like, SimpleNamespace(id=uuid4()))
         insert_result = SimpleNamespace(scalar_one_or_none=lambda: like)
         update_result = SimpleNamespace()
         session = AsyncMock(spec=AsyncSession)

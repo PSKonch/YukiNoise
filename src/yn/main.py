@@ -10,6 +10,7 @@ from redis.asyncio import Redis
 
 from yn.modules.artists.route import router as artists_router
 from yn.modules.auth.route import router as auth_router
+from yn.modules.commentaries.route import router as commentaries_router
 from yn.modules.follows.route import router as follows_router
 from yn.modules.likes.route import router as likes_router
 from yn.modules.playback.deps import (
@@ -111,6 +112,7 @@ def get_minio() -> MinioStorage:
 register_exception_handlers(app)
 
 app.include_router(auth_router)
+app.include_router(commentaries_router)
 app.include_router(users_router)
 app.include_router(artists_router)
 app.include_router(follows_router)

@@ -55,6 +55,7 @@ class FollowService:
         )
         if follow is None:
             raise FollowAlreadyExistsError
+        await self.uow.commit()
         return FollowDTO.from_orm(follow)
 
     async def unfollow(self, follower_id: UUID, followed_id: UUID) -> None:
@@ -65,6 +66,7 @@ class FollowService:
         )
         if not deleted:
             raise FollowNotFoundError
+        await self.uow.commit()
 
     async def _ensure_artist_exists(self, artist_id: UUID) -> None:
         artist = await self.uow.artists.get_artist_by_id(artist_id)

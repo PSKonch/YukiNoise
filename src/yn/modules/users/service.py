@@ -31,20 +31,27 @@ class UserService:
         )
         if user is None:
             raise EmailAlreadyTakenError
+        await self.uow.commit()
         return UserDTO.from_orm(user)
 
     async def soft_delete_current_user(self, user_id: UUID) -> None:
         await self.uow.users.soft_delete_user(user_id)
+        await self.uow.refresh_tokens.revoke_all_for_user(user_id)
+        await self.uow.commit()
 
     async def restore_user(self, user_id: UUID) -> None:
         await self.uow.users.restore_user(user_id)
+        await self.uow.commit()
 
     async def hard_delete_user(self, user_id: UUID) -> None:
         await self.uow.users.hard_delete_user(user_id)
+        await self.uow.commit()
 
     async def update_user_email(self, user_id: UUID, new_email: str) -> None:
         await self.uow.users.update_email(user_id, new_email)
+        await self.uow.commit()
 
     async def update_user_password(self, user_id: UUID, new_password: str) -> None:
         new_hashed_password = self._password_hasher.hash_password(new_password)
         await self.uow.users.update_password(user_id, new_hashed_password)
+        await self.uow.commit()

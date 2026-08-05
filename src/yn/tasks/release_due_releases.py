@@ -15,6 +15,7 @@ async def release_due_releases() -> None:
                 released_ids = await uow.releases.publish_due_releases()
                 if not released_ids:
                     return
+                await uow.commit()
             logger.info(
                 "Published scheduled releases",
                 extra={"release_ids": [str(release_id) for release_id in released_ids]},

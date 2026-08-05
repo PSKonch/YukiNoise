@@ -29,6 +29,7 @@ def make_service(
             delete=AsyncMock(return_value=deleted),
             is_following=AsyncMock(return_value=True),
         ),
+        commit=AsyncMock(),
     )
     return FollowService(cast(Any, repositories)), repositories
 
@@ -55,13 +56,16 @@ def test_follow_creates_relationship() -> None:
         follower_id=follower_id,
         followed_id=followed_id,
     )
+    repositories.commit.assert_awaited_once()
 
 
 def test_follow_rejects_duplicate() -> None:
-    service, _ = make_service(target=SimpleNamespace(deleted_at=None))
+    service, repositories = make_service(target=SimpleNamespace(deleted_at=None))
 
     with pytest.raises(FollowAlreadyExistsError):
         asyncio.run(service.follow(uuid4(), uuid4()))
+
+    repositories.commit.assert_not_awaited()
 
 
 def test_follow_rejects_self_without_querying_database() -> None:

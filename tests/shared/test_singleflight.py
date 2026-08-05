@@ -25,7 +25,8 @@ def test_coalesces_concurrent_operations() -> None:
         await asyncio.sleep(0)
         release_operation.set()
 
-        assert await asyncio.gather(first, second) == ("result", "result")
+        results = await asyncio.gather(first, second)
+        assert list(results) == ["result", "result"]
         assert calls == 1
 
     asyncio.run(run())

@@ -28,7 +28,8 @@ def make_service(
         create=AsyncMock(return_value=created_like),
         delete=AsyncMock(return_value=deleted),
     )
-    return LikeService(cast(Any, SimpleNamespace(likes=likes))), likes
+    uow = SimpleNamespace(likes=likes, commit=AsyncMock())
+    return LikeService(cast(Any, uow)), likes
 
 
 def test_like_creates_relationship() -> None:
@@ -52,6 +53,7 @@ def test_like_creates_relationship() -> None:
         target_type=TargetType.TRACK,
         target_id=target_id,
     )
+    cast(AsyncMock, service.uow.commit).assert_awaited_once()
 
 
 def test_like_rejects_missing_target() -> None:
@@ -68,6 +70,8 @@ def test_like_rejects_duplicate() -> None:
 
     with pytest.raises(LikeAlreadyExistsError):
         asyncio.run(service.like(uuid4(), TargetType.RELEASE, uuid4()))
+
+    cast(AsyncMock, service.uow.commit).assert_not_awaited()
 
 
 def test_unlike_rejects_missing_like() -> None:

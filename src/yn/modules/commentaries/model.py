@@ -18,6 +18,11 @@ class Commentary(Base):
     __tablename__ = "commentaries"
     __table_args__ = (
         Index("ix_commentaries_post_id_created_at", "post_id", "created_at"),
+        Index(
+            "ix_commentaries_commentary_id_created_at",
+            "commentary_id",
+            "created_at",
+        ),
     )
 
     id: Mapped[PyUUID] = mapped_column(
@@ -25,17 +30,17 @@ class Commentary(Base):
     )
     artist_id: Mapped[PyUUID] = mapped_column(
         SA_UUID(as_uuid=True),
-        ForeignKey("artists.id"),
+        ForeignKey("artists.id", ondelete="CASCADE"),
         nullable=False,
     )
     post_id: Mapped[PyUUID] = mapped_column(
         SA_UUID(as_uuid=True),
-        ForeignKey("posts.id"),
+        ForeignKey("posts.id", ondelete="CASCADE"),
         nullable=False,
     )
     commentary_id: Mapped[PyUUID | None] = mapped_column(
         SA_UUID(as_uuid=True),
-        ForeignKey("commentaries.id"),
+        ForeignKey("commentaries.id", ondelete="SET NULL"),
         nullable=True,
     )
     content: Mapped[str] = mapped_column(nullable=False)
@@ -51,11 +56,10 @@ class Commentary(Base):
     # relationships
     artist: Mapped["Artist"] = relationship("Artist", back_populates="commentaries")
     post: Mapped["Post"] = relationship("Post", back_populates="commentaries")
-    parent_commentary: Mapped["Commentary"] = relationship(
-        "Commentary", remote_side="Commentary.id", back_populates="child_commentaries"
+    parent_commentary: Mapped["Commentary | None"] = relationship(
+        "Commentary", remote_side=[id], back_populates="child_commentaries"
     )
     child_commentaries: Mapped[list["Commentary"]] = relationship(
         "Commentary",
-        remote_side="Commentary.commentary_id",
         back_populates="parent_commentary",
     )
