@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from yn.modules.artists.repository import ArtistRepository
     from yn.modules.auth.repository import RefreshTokenRepository
     from yn.modules.follows.repository import FollowRepository
+    from yn.modules.likes.repository import LikeRepository
     from yn.modules.playlists.repository import PlaylistsRepository
     from yn.modules.posts.repository import PostRepository
     from yn.modules.releases.repository import ReleaseRepository
@@ -23,6 +24,7 @@ class UnitOfWork:
         self._artists_repo: "ArtistRepository | None" = None
         self._refresh_tokens_repo: "RefreshTokenRepository | None" = None
         self._follows_repo: "FollowRepository | None" = None
+        self._likes_repo: "LikeRepository | None" = None
         self._playlists_repo: "PlaylistsRepository | None" = None
         self._posts_repo: "PostRepository | None" = None
         self._releases_repo: "ReleaseRepository | None" = None
@@ -67,6 +69,16 @@ class UnitOfWork:
             FollowRepository = getattr(repo_mod, "FollowRepository")
             self._follows_repo = FollowRepository(self._session)
         return self._follows_repo
+
+    @property
+    def likes(self) -> "LikeRepository":
+        if self._likes_repo is None:
+            from importlib import import_module
+
+            repo_mod = import_module("yn.modules.likes.repository")
+            LikeRepository = getattr(repo_mod, "LikeRepository")
+            self._likes_repo = LikeRepository(self._session)
+        return self._likes_repo
 
     @property
     def playlists(self) -> "PlaylistsRepository":

@@ -11,6 +11,7 @@ from redis.asyncio import Redis
 from yn.modules.artists.route import router as artists_router
 from yn.modules.auth.route import router as auth_router
 from yn.modules.follows.route import router as follows_router
+from yn.modules.likes.route import router as likes_router
 from yn.modules.playback.deps import (
     get_playback_redis_client,
     get_tracks_play_counter_queue,
@@ -113,6 +114,7 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(artists_router)
 app.include_router(follows_router)
+app.include_router(likes_router)
 app.include_router(playback_router)
 app.include_router(playlists_router)
 app.include_router(posts_router)
