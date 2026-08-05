@@ -207,7 +207,7 @@ class ArtistService:
             displayed_name=artist_dto.displayed_name,
         )
         await self.kafka_publisher.publish(
-            event,
+            message=event,
             key=event.artist_id,
             headers={
                 "event-type": event.event_type,

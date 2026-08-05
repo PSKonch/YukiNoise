@@ -4,7 +4,7 @@ from uuid import UUID as PyUUID
 from uuid import uuid4
 
 from sqlalchemy import UUID as SA_UUID
-from sqlalchemy import ForeignKey, Index, func
+from sqlalchemy import ForeignKey, Index, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from yn.modules.likes.enums import TargetType
@@ -17,6 +17,12 @@ if TYPE_CHECKING:
 class Like(Base):
     __tablename__ = "likes"
     __table_args__ = (
+        UniqueConstraint(
+            "artist_id",
+            "target_type",
+            "target_id",
+            name="uq_likes_artist_target",
+        ),
         Index("ix_likes_artist_id", "artist_id"),
         Index("ix_likes_target_type_target_id", "target_type", "target_id"),
         Index("ix_likes_created_at", "created_at"),
@@ -27,7 +33,7 @@ class Like(Base):
     )
     artist_id: Mapped[PyUUID] = mapped_column(
         SA_UUID(as_uuid=True),
-        ForeignKey("artists.id"),
+        ForeignKey("artists.id", ondelete="CASCADE"),
         nullable=False,
     )
     target_type: Mapped[TargetType] = mapped_column(nullable=False)
