@@ -35,6 +35,7 @@ class LikeService:
         )
         if like is None:
             raise LikeAlreadyExistsError
+        await self.uow.commit()
         return LikeDTO.from_orm(like)
 
     async def unlike(
@@ -47,6 +48,7 @@ class LikeService:
         )
         if not deleted:
             raise LikeNotFoundError
+        await self.uow.commit()
 
     async def _ensure_target_exists(
         self, target_type: TargetType, target_id: UUID

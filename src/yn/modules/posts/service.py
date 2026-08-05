@@ -76,6 +76,7 @@ class PostService:
         post = await self.uow.posts.create(
             artist_id=artist_id, title=title, content=content
         )
+        await self.uow.commit()
         return PostDTO.from_orm(post)
 
     async def update_post(
@@ -93,10 +94,12 @@ class PostService:
         )
         if not updated:
             raise PostNotFoundError
+        await self.uow.commit()
         return updated
 
     async def delete_post(self, post_id: UUID, artist_id: UUID) -> bool:
         deleted = await self.uow.posts.hard_delete(post_id, artist_id)
         if not deleted:
             raise PostNotFoundError
+        await self.uow.commit()
         return deleted

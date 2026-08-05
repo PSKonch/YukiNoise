@@ -37,9 +37,13 @@ def test_create_artist_publishes_event() -> None:
             bio=None,
             social_links=None,
         )
+        call_order: list[str] = []
         publisher = AsyncMock(spec=KafkaPublisher)
+        publisher.publish.side_effect = lambda **_: call_order.append("publish")
         uow = SimpleNamespace(
             artists=SimpleNamespace(create=AsyncMock(return_value=artist)),
+            commit=AsyncMock(side_effect=lambda: call_order.append("commit")),
+            rollback=AsyncMock(),
         )
         service = ArtistService(
             cast(Any, uow),
@@ -51,7 +55,9 @@ def test_create_artist_publishes_event() -> None:
         result = await service.create_artist(user_id, "Artist")
 
         assert result.id == artist_id
+        uow.commit.assert_awaited_once()
         publisher.publish.assert_awaited_once()
+        assert call_order == ["commit", "publish"]
         event = publisher.publish.await_args.kwargs["message"]
         assert isinstance(event, ArtistCreatedEvent)
         assert event.artist_id == artist_id
@@ -81,8 +87,13 @@ def test_create_artist_does_not_publish_event_on_conflict() -> None:
             create=AsyncMock(side_effect=ArtistConflictError),
             get_artist_conflict_flags=AsyncMock(return_value=(True, False)),
         )
+        uow = SimpleNamespace(
+            artists=artists,
+            commit=AsyncMock(),
+            rollback=AsyncMock(),
+        )
         service = ArtistService(
-            cast(Any, SimpleNamespace(artists=artists)),
+            cast(Any, uow),
             cast(Any, SimpleNamespace()),
             cast(Any, SimpleNamespace()),
             cast(KafkaPublisher, publisher),
@@ -91,6 +102,8 @@ def test_create_artist_does_not_publish_event_on_conflict() -> None:
         with pytest.raises(ArtistAlreadyExistsError):
             await service.create_artist(uuid4(), "Artist")
 
+        uow.rollback.assert_awaited_once()
+        uow.commit.assert_not_awaited()
         publisher.publish.assert_not_awaited()
 
     asyncio.run(run())

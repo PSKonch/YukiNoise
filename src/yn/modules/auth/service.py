@@ -32,7 +32,9 @@ class AuthService:
         if user is None:
             raise EmailAlreadyTakenError
 
-        return await self._issue_token_pair(user.id)
+        token_pair = await self._issue_token_pair(user.id)
+        await self.uow.commit()
+        return token_pair
 
     async def login(
         self,
@@ -52,7 +54,9 @@ class AuthService:
         ):
             raise InvalidCredentialsError
 
-        return await self._issue_token_pair(user.id)
+        token_pair = await self._issue_token_pair(user.id)
+        await self.uow.commit()
+        return token_pair
 
     async def refresh(self, refresh_token: str) -> TokenPairDTO:
         token_hash = self.security.token_processor.hash_refresh_token(refresh_token)
@@ -66,13 +70,16 @@ class AuthService:
         user = await self.uow.users.get_user_by_id(stored_token.user_id)
         if user is None or not user.is_active or user.deleted_at is not None:
             await self.uow.refresh_tokens.revoke(stored_token.id)
+            await self.uow.commit()
             raise InvalidRefreshTokenError
 
         revoked = await self.uow.refresh_tokens.revoke(stored_token.id)
         if not revoked:
             raise InvalidRefreshTokenError
 
-        return await self._issue_token_pair(stored_token.user_id)
+        token_pair = await self._issue_token_pair(stored_token.user_id)
+        await self.uow.commit()
+        return token_pair
 
     async def logout(self, refresh_token: str) -> None:
         token_hash = self.security.token_processor.hash_refresh_token(refresh_token)
@@ -86,6 +93,7 @@ class AuthService:
         revoked = await self.uow.refresh_tokens.revoke(stored_token.id)
         if not revoked:
             raise InvalidRefreshTokenError
+        await self.uow.commit()
 
     async def get_user_from_access_token(
         self,
@@ -107,6 +115,7 @@ class AuthService:
 
     async def revoke_all_user_sessions(self, user_id: UUID) -> None:
         await self.uow.refresh_tokens.revoke_all_for_user(user_id)
+        await self.uow.commit()
 
     async def _issue_token_pair(self, user_id: UUID) -> TokenPairDTO:
         access_token = self.security.token_processor.create_access_token(user_id)

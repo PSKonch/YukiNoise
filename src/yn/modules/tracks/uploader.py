@@ -148,6 +148,7 @@ class TrackUploadProcessor:
                 path=payload.storage_key,
                 genres=payload.genres,
             )
+            await self.uow.commit()
         except TrackConflictError:
             await self._safe_delete_from_storage(payload.storage_key)
             raise

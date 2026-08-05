@@ -97,10 +97,12 @@ class PlaylistService:
             cover_url=cover_url,
             is_private=is_private,
         )
+        await self.uow.commit()
         return PlaylistDTO.from_orm(playlist)
 
     async def create_favs_playlist(self, artist_id: UUID) -> None:
         await self.uow.playlists.create_system_favs(artist_id)
+        await self.uow.commit()
 
     async def update_playlist(
         self,
@@ -127,6 +129,7 @@ class PlaylistService:
                 include_deleted=False,
             )
             raise PlaylistNotFoundError
+        await self.uow.commit()
         return PlaylistDTO.from_orm(updated)
 
     async def delete_playlist(self, playlist_id: UUID, artist_id: UUID) -> None:
@@ -141,6 +144,7 @@ class PlaylistService:
                 include_deleted=False,
             )
             raise PlaylistNotFoundError
+        await self.uow.commit()
 
     async def add_track_to_playlist(
         self,
@@ -153,6 +157,7 @@ class PlaylistService:
             track_id=track_id,
             profile_id=artist_id,
         )
+        await self.uow.commit()
 
     async def remove_track_from_playlist(
         self,
@@ -171,6 +176,7 @@ class PlaylistService:
         )
         if not removed:
             raise PlaylistTrackNotFoundError
+        await self.uow.commit()
 
     async def _get_owned_playlist_entity(
         self,

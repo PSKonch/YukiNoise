@@ -141,14 +141,11 @@ class UnitOfWork:
         exc: BaseException | None,
         tb: TracebackType | None,
     ) -> None:
-        if exc:
-            await self._session.rollback()
-        else:
-            try:
-                await self._session.commit()
-            except Exception:
-                await self._session.rollback()
-                raise
+        # Successful write transactions must be committed explicitly by the
+        # application service that owns the use case. Rolling back here makes a
+        # forgotten commit fail closed instead of persisting at dependency
+        # teardown, after external side effects may already have happened.
+        await self._session.rollback()
 
     async def commit(self) -> None:
         await self._session.commit()

@@ -53,6 +53,7 @@ def make_service(
     uow = SimpleNamespace(
         posts=SimpleNamespace(get_post_by_id=AsyncMock(return_value=post)),
         commentaries=commentaries,
+        commit=AsyncMock(),
     )
     return CommentaryService(cast(Any, uow)), commentaries
 
@@ -80,6 +81,7 @@ def test_create_commentary() -> None:
         content="Comment",
         commentary_id=None,
     )
+    cast(AsyncMock, service.uow.commit).assert_awaited_once()
 
 
 def test_create_commentary_rejects_missing_post() -> None:

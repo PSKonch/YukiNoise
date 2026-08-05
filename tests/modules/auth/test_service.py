@@ -19,7 +19,7 @@ def make_auth_service(
         get_active_by_hash=AsyncMock(return_value=stored_token),
         revoke=AsyncMock(return_value=revoked),
     )
-    uow = SimpleNamespace(refresh_tokens=refresh_tokens)
+    uow = SimpleNamespace(refresh_tokens=refresh_tokens, commit=AsyncMock())
     security = SimpleNamespace(
         token_processor=SimpleNamespace(
             hash_refresh_token=lambda _: "hashed-refresh-token"
@@ -58,3 +58,4 @@ def test_logout_revokes_active_refresh_token() -> None:
     asyncio.run(service.logout("active-token"))
 
     revoke.assert_awaited_once_with(stored_token.id)
+    cast(AsyncMock, service.uow.commit).assert_awaited_once()

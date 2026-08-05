@@ -190,6 +190,9 @@ class ArtistService:
                 social_links=social_links,
             )
         except ArtistConflictError as exc:
+            # PostgreSQL rejects all further statements after an integrity
+            # violation until the failed transaction is rolled back.
+            await self.uow.rollback()
             user_taken, name_taken = await self.uow.artists.get_artist_conflict_flags(
                 user_id=user_id,
                 displayed_name=displayed_name,
@@ -201,6 +204,7 @@ class ArtistService:
             raise
 
         artist_dto = ArtistDTO.from_orm(artist)
+        await self.uow.commit()
         event = ArtistCreatedEvent(
             artist_id=artist_dto.id,
             user_id=artist_dto.user_id,
@@ -231,6 +235,8 @@ class ArtistService:
             bio=bio,
             social_links=social_links,
         )
+        if updated:
+            await self.uow.commit()
         if updated and artist is not None:
             await self._invalidate_artist(artist.id)
         return updated
@@ -238,6 +244,8 @@ class ArtistService:
     async def hard_delete_artist(self, user_id: UUID) -> bool:
         artist = await self.uow.artists.get_artist_by_user_id(user_id)
         deleted = await self.uow.artists.hard_delete_artist(user_id)
+        if deleted:
+            await self.uow.commit()
         if deleted and artist is not None:
             await self._invalidate_artist(artist.id)
         return deleted

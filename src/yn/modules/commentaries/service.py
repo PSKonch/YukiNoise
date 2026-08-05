@@ -53,6 +53,7 @@ class CommentaryService:
             content=content,
             commentary_id=commentary_id,
         )
+        await self.uow.commit()
         return CommentaryDTO.from_orm(commentary)
 
     async def update_commentary(
@@ -65,6 +66,7 @@ class CommentaryService:
         )
         if commentary is None:
             raise CommentaryNotFoundError
+        await self.uow.commit()
         return CommentaryDTO.from_orm(commentary)
 
     async def delete_commentary(self, *, commentary_id: UUID, artist_id: UUID) -> None:
@@ -74,6 +76,7 @@ class CommentaryService:
         )
         if not deleted:
             raise CommentaryNotFoundError
+        await self.uow.commit()
 
     async def _ensure_post_exists(self, post_id: UUID) -> None:
         if await self.uow.posts.get_post_by_id(post_id) is None:

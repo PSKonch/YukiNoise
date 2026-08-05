@@ -6,8 +6,6 @@ from yn.modules.auth.auth import (
     get_current_user,
     get_current_user_allow_deleted,
 )
-from yn.modules.auth.deps import get_auth_service
-from yn.modules.auth.service import AuthService
 from yn.modules.users.deps import get_user_service
 from yn.modules.users.dto import UserDTO
 from yn.modules.users.schemas import UserRead
@@ -27,10 +25,8 @@ async def read_current_user(
 async def soft_delete_current_user(
     current_user: Annotated[UserDTO, Depends(get_current_user)],
     user_service: Annotated[UserService, Depends(get_user_service)],
-    auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> dict[str, str]:
     await user_service.soft_delete_current_user(current_user.id)
-    await auth_service.revoke_all_user_sessions(current_user.id)
     return {"detail": "User soft deleted successfully"}
 
 

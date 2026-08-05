@@ -82,6 +82,8 @@ class ReleaseCoverUploadProcessor:
                 artist_id=payload.artist_id,
                 cover_path=payload.cover_path,
             )
+            if updated_release is not None:
+                await self.uow.commit()
         except Exception as exc:
             await self._safe_delete_from_storage(payload.cover_path)
             raise ReleaseCoverUploadFailedError from exc
