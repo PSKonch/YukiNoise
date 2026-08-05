@@ -52,12 +52,13 @@ def test_create_artist_publishes_event() -> None:
 
         assert result.id == artist_id
         publisher.publish.assert_awaited_once()
-        event = publisher.publish.await_args.args[0]
+        event = publisher.publish.await_args.kwargs["message"]
         assert isinstance(event, ArtistCreatedEvent)
         assert event.artist_id == artist_id
         assert event.user_id == user_id
         assert event.displayed_name == "Artist"
         assert publisher.publish.await_args.kwargs == {
+            "message": event,
             "key": artist_id,
             "headers": {
                 "event-type": "artist.created",

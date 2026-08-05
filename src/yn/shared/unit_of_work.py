@@ -8,6 +8,7 @@ from yn.shared.database import get_primary_session, get_replica_session
 if TYPE_CHECKING:
     from yn.modules.artists.repository import ArtistRepository
     from yn.modules.auth.repository import RefreshTokenRepository
+    from yn.modules.commentaries.repository import CommentaryRepository
     from yn.modules.follows.repository import FollowRepository
     from yn.modules.likes.repository import LikeRepository
     from yn.modules.playlists.repository import PlaylistsRepository
@@ -23,6 +24,7 @@ class UnitOfWork:
         self._users_repo: "UserRepository | None" = None
         self._artists_repo: "ArtistRepository | None" = None
         self._refresh_tokens_repo: "RefreshTokenRepository | None" = None
+        self._commentaries_repo: "CommentaryRepository | None" = None
         self._follows_repo: "FollowRepository | None" = None
         self._likes_repo: "LikeRepository | None" = None
         self._playlists_repo: "PlaylistsRepository | None" = None
@@ -59,6 +61,16 @@ class UnitOfWork:
             RefreshTokenRepository = getattr(repo_mod, "RefreshTokenRepository")
             self._refresh_tokens_repo = RefreshTokenRepository(self._session)
         return self._refresh_tokens_repo
+
+    @property
+    def commentaries(self) -> "CommentaryRepository":
+        if self._commentaries_repo is None:
+            from importlib import import_module
+
+            repo_mod = import_module("yn.modules.commentaries.repository")
+            CommentaryRepository = getattr(repo_mod, "CommentaryRepository")
+            self._commentaries_repo = CommentaryRepository(self._session)
+        return self._commentaries_repo
 
     @property
     def follows(self) -> "FollowRepository":
