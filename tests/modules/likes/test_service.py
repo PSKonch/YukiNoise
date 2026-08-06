@@ -13,23 +13,26 @@ from yn.modules.likes.errors import (
     LikeNotFoundError,
     LikeTargetNotFoundError,
 )
+from yn.modules.likes.events import LikeCreatedEvent, LikeDeletedEvent
 from yn.modules.likes.service import LikeService
+from yn.shared.publisher import KafkaPublisher
 
 
 def make_service(
     *,
     target_exists: bool = True,
     created_like: object | None = None,
-    deleted: bool = True,
+    deleted_like_id: object | None = None,
 ) -> tuple[LikeService, SimpleNamespace]:
     likes = SimpleNamespace(
         target_exists=AsyncMock(return_value=target_exists),
         is_liked=AsyncMock(return_value=True),
         create=AsyncMock(return_value=created_like),
-        delete=AsyncMock(return_value=deleted),
+        delete=AsyncMock(return_value=deleted_like_id),
     )
     uow = SimpleNamespace(likes=likes, commit=AsyncMock())
-    return LikeService(cast(Any, uow)), likes
+    publisher = AsyncMock(spec=KafkaPublisher)
+    return LikeService(cast(Any, uow), cast(KafkaPublisher, publisher)), likes
 
 
 def test_like_creates_relationship() -> None:
@@ -54,6 +57,19 @@ def test_like_creates_relationship() -> None:
         target_id=target_id,
     )
     cast(AsyncMock, service.uow.commit).assert_awaited_once()
+    publisher = cast(AsyncMock, service.kafka_publisher)
+    publisher.publish.assert_awaited_once()
+    event = publisher.publish.await_args.kwargs["message"]
+    assert isinstance(event, LikeCreatedEvent)
+    assert publisher.publish.await_args.kwargs == {
+        "message": event,
+        "key": artist_id,
+        "headers": {
+            "event-type": "like.created",
+            "event-version": "1",
+        },
+        "correlation_id": str(event.event_id),
+    }
 
 
 def test_like_rejects_missing_target() -> None:
@@ -72,10 +88,47 @@ def test_like_rejects_duplicate() -> None:
         asyncio.run(service.like(uuid4(), TargetType.RELEASE, uuid4()))
 
     cast(AsyncMock, service.uow.commit).assert_not_awaited()
+    cast(AsyncMock, service.kafka_publisher).publish.assert_not_awaited()
+
+
+def test_unlike_publishes_deleted_event() -> None:
+    artist_id = uuid4()
+    target_id = uuid4()
+    like_id = uuid4()
+    service, repository = make_service(deleted_like_id=like_id)
+
+    asyncio.run(service.unlike(artist_id, TargetType.PLAYLIST, target_id))
+
+    repository.delete.assert_awaited_once_with(
+        artist_id=artist_id,
+        target_type=TargetType.PLAYLIST,
+        target_id=target_id,
+    )
+    cast(AsyncMock, service.uow.commit).assert_awaited_once()
+    publisher = cast(AsyncMock, service.kafka_publisher)
+    publisher.publish.assert_awaited_once()
+    event = publisher.publish.await_args.kwargs["message"]
+    assert isinstance(event, LikeDeletedEvent)
+    assert event.like_id == like_id
+    assert event.artist_id == artist_id
+    assert event.target_type == TargetType.PLAYLIST
+    assert event.target_id == target_id
+    assert publisher.publish.await_args.kwargs == {
+        "message": event,
+        "key": artist_id,
+        "headers": {
+            "event-type": "like.deleted",
+            "event-version": "1",
+        },
+        "correlation_id": str(event.event_id),
+    }
 
 
 def test_unlike_rejects_missing_like() -> None:
-    service, _ = make_service(deleted=False)
+    service, _ = make_service()
 
     with pytest.raises(LikeNotFoundError):
         asyncio.run(service.unlike(uuid4(), TargetType.PLAYLIST, uuid4()))
+
+    cast(AsyncMock, service.uow.commit).assert_not_awaited()
+    cast(AsyncMock, service.kafka_publisher).publish.assert_not_awaited()
