@@ -6,6 +6,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager
 
+from yn.modules.likes.enums import TargetType
+from yn.modules.likes.model import Like
 from yn.modules.releases.model import Release
 from yn.modules.tracks.errors import TrackConflictError
 from yn.modules.tracks.model import Track
@@ -76,6 +78,31 @@ class TrackRepository:
             update(self.model)
             .where(and_(self.model.id == track_id, self.model.deleted_at.is_(None)))
             .values(play_count=self.model.play_count + 1)
+            .returning(self.model.id)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none() is not None
+
+    async def sync_like_count(self, track_id: UUID) -> bool:
+        like_count = (
+            select(func.count(Like.id))
+            .where(
+                and_(
+                    Like.target_type == TargetType.TRACK,
+                    Like.target_id == track_id,
+                )
+            )
+            .scalar_subquery()
+        )
+        stmt = (
+            update(self.model)
+            .where(
+                and_(
+                    self.model.id == track_id,
+                    self.model.deleted_at.is_(None),
+                )
+            )
+            .values(like_count=like_count)
             .returning(self.model.id)
         )
         result = await self._session.execute(stmt)

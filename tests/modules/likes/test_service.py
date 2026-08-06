@@ -63,7 +63,7 @@ def test_like_creates_relationship() -> None:
     assert isinstance(event, LikeCreatedEvent)
     assert publisher.publish.await_args.kwargs == {
         "message": event,
-        "key": artist_id,
+        "key": f"track:{target_id}",
         "headers": {
             "event-type": "like.created",
             "event-version": "1",
@@ -115,7 +115,7 @@ def test_unlike_publishes_deleted_event() -> None:
     assert event.target_id == target_id
     assert publisher.publish.await_args.kwargs == {
         "message": event,
-        "key": artist_id,
+        "key": f"playlist:{target_id}",
         "headers": {
             "event-type": "like.deleted",
             "event-version": "1",

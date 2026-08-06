@@ -7,7 +7,11 @@ from yn.modules.likes.errors import (
     LikeNotFoundError,
     LikeTargetNotFoundError,
 )
-from yn.modules.likes.events import LikeCreatedEvent, LikeDeletedEvent
+from yn.modules.likes.events import (
+    LikeCreatedEvent,
+    LikeDeletedEvent,
+    like_target_key,
+)
 from yn.shared.publisher.kafka_pub import KafkaPublisher
 from yn.shared.unit_of_work import UnitOfWork
 
@@ -50,7 +54,7 @@ class LikeService:
         )
         await self.kafka_publisher.publish(
             message=event,
-            key=event.artist_id,
+            key=like_target_key(event.target_type, event.target_id),
             headers={
                 "event-type": event.event_type,
                 "event-version": str(event.version),
@@ -79,7 +83,7 @@ class LikeService:
         )
         await self.kafka_publisher.publish(
             message=event,
-            key=event.artist_id,
+            key=like_target_key(event.target_type, event.target_id),
             headers={
                 "event-type": event.event_type,
                 "event-version": str(event.version),

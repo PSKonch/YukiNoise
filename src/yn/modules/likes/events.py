@@ -9,6 +9,10 @@ from yn.modules.likes.enums import TargetType
 LIKES_EVENTS_TOPIC = "likes.events"
 
 
+def like_target_key(target_type: TargetType, target_id: UUID) -> str:
+    return f"{target_type}:{target_id}"
+
+
 class LikeCreatedEvent(BaseModel):
     event_id: UUID = Field(default_factory=uuid4)
     event_type: Literal["like.created"] = "like.created"

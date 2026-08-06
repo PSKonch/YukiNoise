@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import and_, delete, exists, func, select, update
+from sqlalchemy import and_, delete, exists, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -91,14 +91,7 @@ class LikeRepository:
             .returning(self.model)
         )
         result = await self._session.execute(stmt)
-        like = result.scalar_one_or_none()
-        if like is not None and target_type == TargetType.TRACK:
-            await self._session.execute(
-                update(Track)
-                .where(Track.id == target_id)
-                .values(like_count=Track.like_count + 1)
-            )
-        return like
+        return result.scalar_one_or_none()
 
     async def delete(
         self, artist_id: UUID, target_type: TargetType, target_id: UUID
@@ -115,11 +108,4 @@ class LikeRepository:
             .returning(self.model.id)
         )
         result = await self._session.execute(stmt)
-        deleted_like_id = result.scalar_one_or_none()
-        if deleted_like_id is not None and target_type == TargetType.TRACK:
-            await self._session.execute(
-                update(Track)
-                .where(Track.id == target_id)
-                .values(like_count=func.greatest(Track.like_count - 1, 0))
-            )
-        return deleted_like_id
+        return result.scalar_one_or_none()
