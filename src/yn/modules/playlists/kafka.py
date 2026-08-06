@@ -6,11 +6,18 @@ from faststream.middlewares import AckPolicy
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from yn.modules.artists.events import ARTIST_EVENTS_TOPIC, ArtistCreatedEvent
+from yn.modules.likes.enums import TargetType
+from yn.modules.likes.events import (
+    LIKES_EVENTS_TOPIC,
+    LikeCreatedEvent,
+    LikeDeletedEvent,
+)
 from yn.modules.playlists.service import PlaylistService
 from yn.shared.database import async_primary_session
 from yn.shared.unit_of_work import UnitOfWork
 
 PLAYLISTS_ARTIST_EVENTS_GROUP = "playlists.artist-events.v1"
+PLAYLISTS_LIKE_EVENTS_GROUP = "playlists.like-events.v1"
 
 SessionFactory = Callable[[], AbstractAsyncContextManager[AsyncSession]]
 
@@ -35,3 +42,30 @@ async def create_favs_for_artist(
 )
 async def consume_artist_created(event: ArtistCreatedEvent) -> None:
     await create_favs_for_artist(event)
+
+
+async def sync_favs_for_track_like(
+    event: LikeCreatedEvent | LikeDeletedEvent,
+    session_factory: SessionFactory = async_primary_session,
+) -> None:
+    if event.target_type != TargetType.TRACK:
+        return
+
+    async with session_factory() as session:
+        async with UnitOfWork(session) as uow:
+            service = PlaylistService(uow)
+            if isinstance(event, LikeCreatedEvent):
+                await service.add_track_to_favs(event.artist_id, event.target_id)
+            else:
+                await service.remove_track_from_favs(event.artist_id, event.target_id)
+
+
+@router.subscriber(
+    LIKES_EVENTS_TOPIC,
+    group_id=PLAYLISTS_LIKE_EVENTS_GROUP,
+    auto_offset_reset="earliest",
+    ack_policy=AckPolicy.NACK_ON_ERROR,
+    no_reply=True,
+)
+async def consume_track_like(event: LikeCreatedEvent | LikeDeletedEvent) -> None:
+    await sync_favs_for_track_like(event)

@@ -22,6 +22,7 @@ from yn.modules.playlists.kafka import router as playlists_kafka_router
 from yn.modules.playlists.route import router as playlists_router
 from yn.modules.posts.route import router as posts_router
 from yn.modules.releases.route import router as releases_router
+from yn.modules.tracks.kafka import router as tracks_kafka_router
 from yn.modules.tracks.route import router as tracks_router
 from yn.modules.users.route import router as users_router
 from yn.shared.cache.redis_cache import RedisCache, set_redis_cache
@@ -34,6 +35,7 @@ from yn.shared.settings import settings
 from yn.tasks.broker import broker
 
 kafka_broker.include_router(playlists_kafka_router)
+kafka_broker.include_router(tracks_kafka_router)
 
 
 @asynccontextmanager

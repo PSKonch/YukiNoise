@@ -36,13 +36,12 @@ def test_like_insert_is_idempotent() -> None:
     asyncio.run(run())
 
 
-def test_track_like_updates_counter_only_after_insert() -> None:
+def test_track_like_does_not_update_counter_in_likes_repository() -> None:
     async def run() -> None:
         like = cast(Like, SimpleNamespace(id=uuid4()))
         insert_result = SimpleNamespace(scalar_one_or_none=lambda: like)
-        update_result = SimpleNamespace()
         session = AsyncMock(spec=AsyncSession)
-        session.execute.side_effect = [insert_result, update_result]
+        session.execute.return_value = insert_result
 
         result = await LikeRepository(session).create(
             uuid4(),
@@ -51,9 +50,6 @@ def test_track_like_updates_counter_only_after_insert() -> None:
         )
 
         assert result is like
-        assert session.execute.await_count == 2
-        update_statement = session.execute.await_args_list[1].args[0]
-        sql = str(update_statement.compile(dialect=POSTGRES_DIALECT))
-        assert "UPDATE tracks SET like_count=(tracks.like_count +" in sql
+        session.execute.assert_awaited_once()
 
     asyncio.run(run())
