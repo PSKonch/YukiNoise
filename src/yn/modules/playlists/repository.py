@@ -250,6 +250,49 @@ class PlaylistsRepository:
         )
         await self._session.execute(stmt)
 
+    async def add_track_to_system_favs(
+        self,
+        artist_id: UUID,
+        track_id: UUID,
+    ) -> None:
+        system_favs = select(
+            self.model.id.label("playlist_id"),
+            literal(track_id).label("track_id"),
+        ).where(
+            and_(
+                self.model.artist_id == artist_id,
+                self.model.title == "favs",
+                self.model.playlist_type == PlaylistType.SYSTEM,
+                self.model.deleted_at.is_(None),
+            )
+        )
+        stmt = (
+            pg_insert(self.auxiliary_model)
+            .from_select(["playlist_id", "track_id"], system_favs)
+            .on_conflict_do_nothing(index_elements=["playlist_id", "track_id"])
+        )
+        await self._session.execute(stmt)
+
+    async def remove_track_from_system_favs(
+        self,
+        artist_id: UUID,
+        track_id: UUID,
+    ) -> None:
+        system_favs_ids = select(self.model.id).where(
+            and_(
+                self.model.artist_id == artist_id,
+                self.model.title == "favs",
+                self.model.playlist_type == PlaylistType.SYSTEM,
+            )
+        )
+        stmt = delete(self.auxiliary_model).where(
+            and_(
+                self.auxiliary_model.playlist_id.in_(system_favs_ids),
+                self.auxiliary_model.track_id == track_id,
+            )
+        )
+        await self._session.execute(stmt)
+
     async def insert_track(
         self,
         playlist_id: UUID,

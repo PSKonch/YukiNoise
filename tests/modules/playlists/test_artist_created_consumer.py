@@ -17,7 +17,11 @@ from yn.modules.playlists.kafka import (
 
 
 def test_consumer_uses_dedicated_group_and_at_least_once_acknowledgement() -> None:
-    subscriber = cast(Any, router.subscribers[0])
+    subscriber = next(
+        cast(Any, item)
+        for item in router.subscribers
+        if cast(Any, item).group_id == PLAYLISTS_ARTIST_EVENTS_GROUP
+    )
 
     assert subscriber.topics == [ARTIST_EVENTS_TOPIC]
     assert subscriber.group_id == PLAYLISTS_ARTIST_EVENTS_GROUP

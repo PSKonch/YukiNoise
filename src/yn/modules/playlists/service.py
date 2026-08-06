@@ -104,6 +104,21 @@ class PlaylistService:
         await self.uow.playlists.create_system_favs(artist_id)
         await self.uow.commit()
 
+    async def add_track_to_favs(self, artist_id: UUID, track_id: UUID) -> None:
+        await self.uow.playlists.create_system_favs(artist_id)
+        await self.uow.playlists.add_track_to_system_favs(
+            artist_id=artist_id,
+            track_id=track_id,
+        )
+        await self.uow.commit()
+
+    async def remove_track_from_favs(self, artist_id: UUID, track_id: UUID) -> None:
+        await self.uow.playlists.remove_track_from_system_favs(
+            artist_id=artist_id,
+            track_id=track_id,
+        )
+        await self.uow.commit()
+
     async def update_playlist(
         self,
         *,
