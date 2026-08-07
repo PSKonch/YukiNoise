@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from yn.modules.playlists.repository import PlaylistsRepository
     from yn.modules.posts.repository import PostRepository
     from yn.modules.releases.repository import ReleaseRepository
+    from yn.modules.tracks.metrics_repository import TrackMetricsRepository
     from yn.modules.tracks.repository import TrackRepository
     from yn.modules.users.repository import UserRepository
     from yn.shared.outbox.repository import OutboxRepository
@@ -32,6 +33,7 @@ class UnitOfWork:
         self._posts_repo: "PostRepository | None" = None
         self._releases_repo: "ReleaseRepository | None" = None
         self._tracks_repo: "TrackRepository | None" = None
+        self._track_metrics_repo: "TrackMetricsRepository | None" = None
         self._outbox_repo: "OutboxRepository | None" = None
 
     @property
@@ -133,6 +135,14 @@ class UnitOfWork:
             TrackRepository = getattr(repo_mod, "TrackRepository")
             self._tracks_repo = TrackRepository(self._session)
         return self._tracks_repo
+
+    @property
+    def track_metrics(self) -> "TrackMetricsRepository":
+        if self._track_metrics_repo is None:
+            from yn.modules.tracks.metrics_repository import TrackMetricsRepository
+
+            self._track_metrics_repo = TrackMetricsRepository(self._session)
+        return self._track_metrics_repo
 
     @property
     def outbox(self) -> "OutboxRepository":
