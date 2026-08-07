@@ -13,9 +13,13 @@ from yn.modules.likes.errors import (
     LikeNotFoundError,
     LikeTargetNotFoundError,
 )
-from yn.modules.likes.events import LikeCreatedEvent, LikeDeletedEvent
+from yn.modules.likes.events import (
+    LIKES_EVENTS_TOPIC,
+    LikeCreatedEvent,
+    LikeDeletedEvent,
+)
 from yn.modules.likes.service import LikeService
-from yn.shared.publisher import KafkaPublisher
+from yn.shared.outbox.publisher import OutboxPublisher
 
 
 def make_service(
@@ -30,9 +34,13 @@ def make_service(
         create=AsyncMock(return_value=created_like),
         delete=AsyncMock(return_value=deleted_like_id),
     )
-    uow = SimpleNamespace(likes=likes, commit=AsyncMock())
-    publisher = AsyncMock(spec=KafkaPublisher)
-    return LikeService(cast(Any, uow), cast(KafkaPublisher, publisher)), likes
+    uow = SimpleNamespace(
+        likes=likes,
+        outbox=SimpleNamespace(add=AsyncMock()),
+        commit=AsyncMock(),
+    )
+    publisher = AsyncMock(spec=OutboxPublisher)
+    return LikeService(cast(Any, uow), cast(OutboxPublisher, publisher)), likes
 
 
 def test_like_creates_relationship() -> None:
@@ -57,19 +65,23 @@ def test_like_creates_relationship() -> None:
         target_id=target_id,
     )
     cast(AsyncMock, service.uow.commit).assert_awaited_once()
-    publisher = cast(AsyncMock, service.kafka_publisher)
-    publisher.publish.assert_awaited_once()
-    event = publisher.publish.await_args.kwargs["message"]
-    assert isinstance(event, LikeCreatedEvent)
-    assert publisher.publish.await_args.kwargs == {
-        "message": event,
-        "key": f"track:{target_id}",
-        "headers": {
-            "event-type": "like.created",
-            "event-version": "1",
-        },
-        "correlation_id": str(event.event_id),
+    outbox_add = cast(AsyncMock, service.uow.outbox.add)
+    outbox_add.assert_awaited_once()
+    outbox_call = outbox_add.await_args
+    assert outbox_call is not None
+    outbox_values = outbox_call.kwargs
+    event = LikeCreatedEvent.model_validate(outbox_values["payload"])
+    assert outbox_values == {
+        "event_id": event.event_id,
+        "topic": LIKES_EVENTS_TOPIC,
+        "message_key": f"track:{target_id}",
+        "event_type": "like.created",
+        "version": 1,
+        "payload": event.model_dump(mode="json"),
     }
+    cast(AsyncMock, service.outbox_publisher).publish_now.assert_awaited_once_with(
+        event.event_id
+    )
 
 
 def test_like_rejects_missing_target() -> None:
@@ -88,7 +100,8 @@ def test_like_rejects_duplicate() -> None:
         asyncio.run(service.like(uuid4(), TargetType.RELEASE, uuid4()))
 
     cast(AsyncMock, service.uow.commit).assert_not_awaited()
-    cast(AsyncMock, service.kafka_publisher).publish.assert_not_awaited()
+    cast(AsyncMock, service.uow.outbox.add).assert_not_awaited()
+    cast(AsyncMock, service.outbox_publisher).publish_now.assert_not_awaited()
 
 
 def test_unlike_publishes_deleted_event() -> None:
@@ -105,23 +118,27 @@ def test_unlike_publishes_deleted_event() -> None:
         target_id=target_id,
     )
     cast(AsyncMock, service.uow.commit).assert_awaited_once()
-    publisher = cast(AsyncMock, service.kafka_publisher)
-    publisher.publish.assert_awaited_once()
-    event = publisher.publish.await_args.kwargs["message"]
-    assert isinstance(event, LikeDeletedEvent)
+    outbox_add = cast(AsyncMock, service.uow.outbox.add)
+    outbox_add.assert_awaited_once()
+    outbox_call = outbox_add.await_args
+    assert outbox_call is not None
+    outbox_values = outbox_call.kwargs
+    event = LikeDeletedEvent.model_validate(outbox_values["payload"])
     assert event.like_id == like_id
     assert event.artist_id == artist_id
     assert event.target_type == TargetType.PLAYLIST
     assert event.target_id == target_id
-    assert publisher.publish.await_args.kwargs == {
-        "message": event,
-        "key": f"playlist:{target_id}",
-        "headers": {
-            "event-type": "like.deleted",
-            "event-version": "1",
-        },
-        "correlation_id": str(event.event_id),
+    assert outbox_values == {
+        "event_id": event.event_id,
+        "topic": LIKES_EVENTS_TOPIC,
+        "message_key": f"playlist:{target_id}",
+        "event_type": "like.deleted",
+        "version": 1,
+        "payload": event.model_dump(mode="json"),
     }
+    cast(AsyncMock, service.outbox_publisher).publish_now.assert_awaited_once_with(
+        event.event_id
+    )
 
 
 def test_unlike_rejects_missing_like() -> None:
@@ -131,4 +148,5 @@ def test_unlike_rejects_missing_like() -> None:
         asyncio.run(service.unlike(uuid4(), TargetType.PLAYLIST, uuid4()))
 
     cast(AsyncMock, service.uow.commit).assert_not_awaited()
-    cast(AsyncMock, service.kafka_publisher).publish.assert_not_awaited()
+    cast(AsyncMock, service.uow.outbox.add).assert_not_awaited()
+    cast(AsyncMock, service.outbox_publisher).publish_now.assert_not_awaited()

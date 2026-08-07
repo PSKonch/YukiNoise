@@ -8,18 +8,19 @@ from yn.modules.likes.errors import (
     LikeTargetNotFoundError,
 )
 from yn.modules.likes.events import (
+    LIKES_EVENTS_TOPIC,
     LikeCreatedEvent,
     LikeDeletedEvent,
     like_target_key,
 )
-from yn.shared.publisher.kafka_pub import KafkaPublisher
+from yn.shared.outbox.publisher import OutboxPublisher
 from yn.shared.unit_of_work import UnitOfWork
 
 
 class LikeService:
-    def __init__(self, uow: UnitOfWork, kafka_publisher: KafkaPublisher) -> None:
+    def __init__(self, uow: UnitOfWork, outbox_publisher: OutboxPublisher) -> None:
         self.uow = uow
-        self.kafka_publisher = kafka_publisher
+        self.outbox_publisher = outbox_publisher
 
     async def is_liked(
         self, artist_id: UUID, target_type: TargetType, target_id: UUID
@@ -42,7 +43,6 @@ class LikeService:
         )
         if like is None:
             raise LikeAlreadyExistsError
-        await self.uow.commit()
 
         like_dto = LikeDTO.from_orm(like)
 
@@ -52,15 +52,16 @@ class LikeService:
             target_type=like_dto.target_type,
             target_id=like_dto.target_id,
         )
-        await self.kafka_publisher.publish(
-            message=event,
-            key=like_target_key(event.target_type, event.target_id),
-            headers={
-                "event-type": event.event_type,
-                "event-version": str(event.version),
-            },
-            correlation_id=str(event.event_id),
+        await self.uow.outbox.add(
+            event_id=event.event_id,
+            topic=LIKES_EVENTS_TOPIC,
+            message_key=like_target_key(event.target_type, event.target_id),
+            event_type=event.event_type,
+            version=event.version,
+            payload=event.model_dump(mode="json"),
         )
+        await self.uow.commit()
+        await self.outbox_publisher.publish_now(event.event_id)
         return like_dto
 
     async def unlike(
@@ -73,7 +74,6 @@ class LikeService:
         )
         if deleted_like_id is None:
             raise LikeNotFoundError
-        await self.uow.commit()
 
         event = LikeDeletedEvent(
             like_id=deleted_like_id,
@@ -81,15 +81,16 @@ class LikeService:
             target_type=target_type,
             target_id=target_id,
         )
-        await self.kafka_publisher.publish(
-            message=event,
-            key=like_target_key(event.target_type, event.target_id),
-            headers={
-                "event-type": event.event_type,
-                "event-version": str(event.version),
-            },
-            correlation_id=str(event.event_id),
+        await self.uow.outbox.add(
+            event_id=event.event_id,
+            topic=LIKES_EVENTS_TOPIC,
+            message_key=like_target_key(event.target_type, event.target_id),
+            event_type=event.event_type,
+            version=event.version,
+            payload=event.model_dump(mode="json"),
         )
+        await self.uow.commit()
+        await self.outbox_publisher.publish_now(event.event_id)
 
     async def _ensure_target_exists(
         self, target_type: TargetType, target_id: UUID
