@@ -11,6 +11,7 @@ from yn.modules.likes.events import (
     LikeCreatedEvent,
     LikeDeletedEvent,
 )
+from yn.modules.tracks.metrics_repository import utc_bucket_date
 from yn.shared.database import async_primary_session
 from yn.shared.unit_of_work import UnitOfWork
 
@@ -30,7 +31,13 @@ async def sync_track_like_count(
 
     async with session_factory() as session:
         async with UnitOfWork(session) as uow:
-            await uow.tracks.sync_like_count(event.target_id)
+            track_was_synced = await uow.tracks.sync_like_count(event.target_id)
+            if track_was_synced:
+                await uow.track_metrics.increment_likes(
+                    track_id=event.target_id,
+                    bucket_date=utc_bucket_date(event.occurred_at),
+                    added=isinstance(event, LikeCreatedEvent),
+                )
             await uow.commit()
 
 

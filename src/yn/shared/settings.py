@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     kafka_host: str = "127.0.0.1"
     kafka_port: int = 9092
     outbox_batch_size: int = 50
-    outbox_poll_interval_seconds: float = 0.5
+    outbox_poll_interval_seconds: float = 5.0
     outbox_retry_base_seconds: float = 1.0
     outbox_retry_max_seconds: float = 300.0
 

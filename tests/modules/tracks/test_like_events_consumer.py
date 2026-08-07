@@ -1,6 +1,7 @@
 import asyncio
 from collections.abc import Callable
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta, timezone
 from types import SimpleNamespace
 from typing import Any, AsyncIterator, cast
 from unittest.mock import AsyncMock
@@ -12,6 +13,7 @@ from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.engine import Dialect
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from yn.modules.auth import model as _auth_model  # noqa: F401
 from yn.modules.likes.enums import TargetType
 from yn.modules.likes.events import (
     LIKES_EVENTS_TOPIC,
@@ -37,14 +39,11 @@ def test_consumer_uses_dedicated_group_and_at_least_once_acknowledgement() -> No
 
 
 @pytest.mark.parametrize("event_class", [LikeCreatedEvent, LikeDeletedEvent])
-def test_track_like_event_recalculates_counter_idempotently(
+def test_track_like_event_recalculates_total_and_updates_daily_metrics(
     event_class: type[LikeCreatedEvent] | type[LikeDeletedEvent],
 ) -> None:
     async def run() -> None:
         session = AsyncMock(spec=AsyncSession)
-        session.execute.return_value = SimpleNamespace(
-            scalar_one_or_none=lambda: uuid4()
-        )
 
         @asynccontextmanager
         async def session_factory() -> AsyncIterator[AsyncSession]:
@@ -56,17 +55,44 @@ def test_track_like_event_recalculates_counter_idempotently(
             artist_id=uuid4(),
             target_type=TargetType.TRACK,
             target_id=track_id,
+            occurred_at=datetime(
+                2026,
+                8,
+                8,
+                1,
+                30,
+                tzinfo=timezone(timedelta(hours=3)),
+            ),
         )
+        session.execute.side_effect = [
+            SimpleNamespace(scalar_one_or_none=lambda: track_id),
+            SimpleNamespace(),
+        ]
 
         await sync_track_like_count(event, cast(SessionFactory, session_factory))
 
-        session.execute.assert_awaited_once()
-        statement = session.execute.await_args.args[0]
-        sql = str(statement.compile(dialect=POSTGRES_DIALECT))
-        assert "UPDATE tracks SET like_count=(SELECT count(likes.id)" in sql
-        assert "likes.target_type" in sql
-        assert "likes.target_id" in sql
-        assert track_id in statement.compile(dialect=POSTGRES_DIALECT).params.values()
+        assert session.execute.await_count == 2
+
+        total_statement = session.execute.await_args_list[0].args[0]
+        total_sql = str(total_statement.compile(dialect=POSTGRES_DIALECT))
+        assert "UPDATE tracks SET like_count=(SELECT count(likes.id)" in total_sql
+        assert "likes.target_type" in total_sql
+        assert "likes.target_id" in total_sql
+
+        metrics_statement = session.execute.await_args_list[1].args[0]
+        metrics_compiled = metrics_statement.compile(dialect=POSTGRES_DIALECT)
+        metrics_sql = str(metrics_compiled)
+        metric_name = (
+            "likes_added" if event_class is LikeCreatedEvent else "likes_removed"
+        )
+        assert "INSERT INTO track_metrics_daily" in metrics_sql
+        assert (
+            f"track_metrics_daily.{metric_name} + excluded.{metric_name}" in metrics_sql
+        )
+        assert datetime(2026, 8, 7, tzinfo=UTC).date() in (
+            metrics_compiled.params.values()
+        )
+        assert None not in metrics_compiled.params.values()
         session.commit.assert_awaited_once()
 
     asyncio.run(run())

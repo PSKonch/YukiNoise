@@ -19,6 +19,7 @@ from yn.modules.notifications import model as _notifications_model  # noqa: F401
 from yn.modules.playlists import model as _playlists_model  # noqa: F401
 from yn.modules.posts import model as _posts_model  # noqa: F401
 from yn.modules.releases import model as _releases_model  # noqa: F401
+from yn.modules.tracks import metrics_model as _track_metrics_model  # noqa: F401
 from yn.modules.tracks import model as _tracks_model  # noqa: F401
 from yn.modules.users import model as _users_model  # noqa: F401
 from yn.shared.database import Base

@@ -26,7 +26,7 @@ class OutboxPublisher:
         broker: KafkaBroker,
         *,
         batch_size: int = 50,
-        poll_interval: float = 0.5,
+        poll_interval: float = 5.0,
         retry_base_seconds: float = 1.0,
         retry_max_seconds: float = 300.0,
     ) -> None:
