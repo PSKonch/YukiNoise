@@ -12,9 +12,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from yn.modules.artists import model as _artists_model  # noqa: F401
 from yn.modules.auth import model as _auth_model  # noqa: F401
+from yn.modules.commentaries import model as _commentaries_model  # noqa: F401
+from yn.modules.follows import model as _follows_model  # noqa: F401
+from yn.modules.likes import model as _likes_model  # noqa: F401
+from yn.modules.notifications import model as _notifications_model  # noqa: F401
+from yn.modules.playlists import model as _playlists_model  # noqa: F401
 from yn.modules.posts import model as _posts_model  # noqa: F401
+from yn.modules.releases import model as _releases_model  # noqa: F401
+from yn.modules.tracks import model as _tracks_model  # noqa: F401
 from yn.modules.users import model as _users_model  # noqa: F401
 from yn.shared.database import Base
+from yn.shared.outbox import model as _outbox_model  # noqa: F401
 from yn.shared.settings import settings
 
 # this is the Alembic Config object, which provides
