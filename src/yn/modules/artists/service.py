@@ -6,13 +6,13 @@ from yn.modules.artists.errors import (
     ArtistConflictError,
     ArtistDisplayedNameTakenError,
 )
-from yn.modules.artists.events import ArtistCreatedEvent
+from yn.modules.artists.events import ARTIST_EVENTS_TOPIC, ArtistCreatedEvent
 from yn.modules.playlists.dto import PlaylistDTO
 from yn.modules.posts.dto import PostDTO
 from yn.modules.releases.dto import ReleaseDTO
 from yn.modules.tracks.dto import TrackDTO
 from yn.shared.cache.redis_cache import RedisCache
-from yn.shared.publisher import KafkaPublisher
+from yn.shared.outbox.publisher import OutboxPublisher
 from yn.shared.settings import settings
 from yn.shared.singleflight import SingleFlight
 from yn.shared.unit_of_work import UnitOfWork
@@ -24,12 +24,12 @@ class ArtistService:
         uow: UnitOfWork,
         cache: RedisCache,
         singleflight: SingleFlight,
-        kafka_publisher: KafkaPublisher,
+        outbox_publisher: OutboxPublisher,
     ) -> None:
         self.uow = uow
         self.cache = cache
         self.singleflight = singleflight
-        self.kafka_publisher = kafka_publisher
+        self.outbox_publisher = outbox_publisher
 
     # Public read
     async def get_all_artists(self, *, limit: int, offset: int) -> list[ArtistDTO]:
@@ -204,21 +204,21 @@ class ArtistService:
             raise
 
         artist_dto = ArtistDTO.from_orm(artist)
-        await self.uow.commit()
         event = ArtistCreatedEvent(
             artist_id=artist_dto.id,
             user_id=artist_dto.user_id,
             displayed_name=artist_dto.displayed_name,
         )
-        await self.kafka_publisher.publish(
-            message=event,
-            key=event.artist_id,
-            headers={
-                "event-type": event.event_type,
-                "event-version": str(event.version),
-            },
-            correlation_id=str(event.event_id),
+        await self.uow.outbox.add(
+            event_id=event.event_id,
+            topic=ARTIST_EVENTS_TOPIC,
+            message_key=str(event.artist_id),
+            event_type=event.event_type,
+            version=event.version,
+            payload=event.model_dump(mode="json"),
         )
+        await self.uow.commit()
+        await self.outbox_publisher.publish_now(event.event_id)
         return artist_dto
 
     async def update_artist(

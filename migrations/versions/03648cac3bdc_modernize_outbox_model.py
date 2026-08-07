@@ -40,7 +40,6 @@ def upgrade() -> None:
         type_=sa.String(length=255),
         existing_nullable=False,
     )
-
     op.add_column("outbox", sa.Column("version", sa.Integer(), nullable=True))
     op.execute(
         """

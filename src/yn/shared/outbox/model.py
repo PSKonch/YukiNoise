@@ -30,6 +30,7 @@ class OutboxModel(Base):
     )
 
     topic: Mapped[str] = mapped_column(String(255), nullable=False)
+    message_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
     event_type: Mapped[str] = mapped_column(String(255), nullable=False)
     version: Mapped[int] = mapped_column(
         Integer, nullable=False, default=1, server_default=text("1")
