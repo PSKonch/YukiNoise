@@ -32,8 +32,7 @@ async def sync_track_like_count(
     async with session_factory() as session:
         async with UnitOfWork(session) as uow:
             track_was_synced = await uow.tracks.sync_like_count(event.target_id)
-            is_new_event = await uow.track_metrics.mark_event_processed(event.event_id)
-            if is_new_event and track_was_synced:
+            if track_was_synced:
                 await uow.track_metrics.increment_likes(
                     track_id=event.target_id,
                     bucket_date=utc_bucket_date(event.occurred_at),

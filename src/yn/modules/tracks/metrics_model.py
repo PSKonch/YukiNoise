@@ -9,7 +9,6 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
-    String,
     func,
     text,
 )
@@ -72,20 +71,4 @@ class TrackMetricsDaily(Base):
         nullable=False,
         server_default=func.now(),
         onupdate=func.now(),
-    )
-
-
-class MetricEventReceipt(Base):
-    __tablename__ = "metric_event_receipts"
-    __table_args__ = (Index("ix_metric_event_receipts_processed_at", "processed_at"),)
-
-    consumer: Mapped[str] = mapped_column(String(100), primary_key=True)
-    event_id: Mapped[PyUUID] = mapped_column(
-        SA_UUID(as_uuid=True),
-        primary_key=True,
-    )
-    processed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
     )

@@ -6,9 +6,7 @@ from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from yn.modules.tracks.metrics_model import MetricEventReceipt, TrackMetricsDaily
-
-TRACK_LIKE_METRICS_CONSUMER = "track_metrics.likes.v1"
+from yn.modules.tracks.metrics_model import TrackMetricsDaily
 
 
 def utc_bucket_date(occurred_at: datetime | None = None) -> date:
@@ -55,26 +53,6 @@ class TrackMetricsRepository:
             },
         )
         await self._session.execute(statement)
-
-    async def mark_event_processed(
-        self,
-        event_id: UUID,
-        *,
-        consumer: str = TRACK_LIKE_METRICS_CONSUMER,
-    ) -> bool:
-        statement = (
-            pg_insert(MetricEventReceipt)
-            .values(consumer=consumer, event_id=event_id)
-            .on_conflict_do_nothing(
-                index_elements=[
-                    MetricEventReceipt.consumer,
-                    MetricEventReceipt.event_id,
-                ]
-            )
-            .returning(MetricEventReceipt.event_id)
-        )
-        result = await self._session.execute(statement)
-        return result.scalar_one_or_none() is not None
 
     async def increment_likes(
         self,

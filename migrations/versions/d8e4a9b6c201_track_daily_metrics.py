@@ -75,31 +75,8 @@ def upgrade() -> None:
         ["bucket_date", "track_id"],
     )
 
-    op.create_table(
-        "metric_event_receipts",
-        sa.Column("consumer", sa.String(length=100), nullable=False),
-        sa.Column("event_id", sa.UUID(), nullable=False),
-        sa.Column(
-            "processed_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.func.now(),
-            nullable=False,
-        ),
-        sa.PrimaryKeyConstraint("consumer", "event_id"),
-    )
-    op.create_index(
-        "ix_metric_event_receipts_processed_at",
-        "metric_event_receipts",
-        ["processed_at"],
-    )
-
 
 def downgrade() -> None:
-    op.drop_index(
-        "ix_metric_event_receipts_processed_at",
-        table_name="metric_event_receipts",
-    )
-    op.drop_table("metric_event_receipts")
     op.drop_index(
         "ix_track_metrics_daily_date_track",
         table_name="track_metrics_daily",

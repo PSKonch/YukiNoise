@@ -50,9 +50,7 @@ def test_track_like_event_recalculates_total_and_updates_daily_metrics(
             yield session
 
         track_id = uuid4()
-        event_id = uuid4()
         event = event_class(
-            event_id=event_id,
             like_id=uuid4(),
             artist_id=uuid4(),
             target_type=TargetType.TRACK,
@@ -68,13 +66,12 @@ def test_track_like_event_recalculates_total_and_updates_daily_metrics(
         )
         session.execute.side_effect = [
             SimpleNamespace(scalar_one_or_none=lambda: track_id),
-            SimpleNamespace(scalar_one_or_none=lambda: event_id),
             SimpleNamespace(),
         ]
 
         await sync_track_like_count(event, cast(SessionFactory, session_factory))
 
-        assert session.execute.await_count == 3
+        assert session.execute.await_count == 2
 
         total_statement = session.execute.await_args_list[0].args[0]
         total_sql = str(total_statement.compile(dialect=POSTGRES_DIALECT))
@@ -82,16 +79,7 @@ def test_track_like_event_recalculates_total_and_updates_daily_metrics(
         assert "likes.target_type" in total_sql
         assert "likes.target_id" in total_sql
 
-        receipt_statement = session.execute.await_args_list[1].args[0]
-        receipt_sql = str(receipt_statement.compile(dialect=POSTGRES_DIALECT))
-        assert "INSERT INTO metric_event_receipts" in receipt_sql
-        assert "ON CONFLICT (consumer, event_id) DO NOTHING" in receipt_sql
-        assert (
-            event_id
-            in receipt_statement.compile(dialect=POSTGRES_DIALECT).params.values()
-        )
-
-        metrics_statement = session.execute.await_args_list[2].args[0]
+        metrics_statement = session.execute.await_args_list[1].args[0]
         metrics_compiled = metrics_statement.compile(dialect=POSTGRES_DIALECT)
         metrics_sql = str(metrics_compiled)
         metric_name = (
@@ -105,39 +93,6 @@ def test_track_like_event_recalculates_total_and_updates_daily_metrics(
             metrics_compiled.params.values()
         )
         assert None not in metrics_compiled.params.values()
-        session.commit.assert_awaited_once()
-
-    asyncio.run(run())
-
-
-def test_duplicate_like_event_does_not_increment_daily_metrics() -> None:
-    async def run() -> None:
-        session = AsyncMock(spec=AsyncSession)
-
-        @asynccontextmanager
-        async def session_factory() -> AsyncIterator[AsyncSession]:
-            yield session
-
-        track_id = uuid4()
-        event = LikeCreatedEvent(
-            like_id=uuid4(),
-            artist_id=uuid4(),
-            target_type=TargetType.TRACK,
-            target_id=track_id,
-        )
-        session.execute.side_effect = [
-            SimpleNamespace(scalar_one_or_none=lambda: track_id),
-            SimpleNamespace(scalar_one_or_none=lambda: None),
-        ]
-
-        await sync_track_like_count(event, cast(SessionFactory, session_factory))
-
-        assert session.execute.await_count == 2
-        sql_statements = [
-            str(call.args[0].compile(dialect=POSTGRES_DIALECT))
-            for call in session.execute.await_args_list
-        ]
-        assert not any("track_metrics_daily" in sql for sql in sql_statements)
         session.commit.assert_awaited_once()
 
     asyncio.run(run())
