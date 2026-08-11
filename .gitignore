@@ -33,10 +33,9 @@ MANIFEST
 frontend/node_modules/
 frontend/dist/
 frontend/*.tsbuildinfo
-frontend/
 
 # k8s secret files
-k8s/secret.yml
+k8s/
 
 # PyInstaller
 #   Usually these files are written by a python script from a template
