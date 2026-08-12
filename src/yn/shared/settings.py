@@ -76,6 +76,7 @@ class Settings(BaseSettings):
     redis_port: int = 6379
     redis_db: int = 0
     artists_cache_ttl_seconds: int = 300
+    chart_playlist_size: int = 100
 
     @property
     def redis_url(self) -> str:

@@ -49,6 +49,22 @@ const post = {
   deleted_at: null,
 };
 
+const chart = {
+  id: "71000000-0000-4000-8000-000000000003",
+  artist_id: null,
+  title: "Топ месяца",
+  description: "Самые прослушиваемые треки за завершённый месяц.",
+  cover_url: null,
+  is_private: false,
+  playlist_type: "system",
+  system_key: "top_month",
+  period_start: "2026-08-01",
+  period_end: "2026-09-01",
+  created_at: "2026-09-01T00:00:00Z",
+  updated_at: "2026-09-01T00:15:00Z",
+  deleted_at: null,
+};
+
 function response(payload: unknown, status = 200): Response {
   return {
     ok: status >= 200 && status < 300,
@@ -81,6 +97,9 @@ describe("App discovery", () => {
         updated_at: "2026-08-04T12:00:00Z",
       }]);
       if (url.includes("/posts/")) return response([post]);
+      if (url.includes(`/playlists/${chart.id}/tracks`)) return response([{ playlist_id: chart.id, track_id: track.id, position: 1, added_at: "2026-09-01T00:15:00Z", track }]);
+      if (url.includes("/playlists/")) return response([chart]);
+      if (url.includes("/tracks/")) return response([track]);
       throw new Error(`Unexpected request: ${url}`);
     }));
   });
@@ -107,5 +126,18 @@ describe("App discovery", () => {
     expect(await screen.findByRole("heading", { name: "Комментарии · 1" })).toBeTruthy();
     expect(screen.getByText("Ждём полный альбом.")).toBeTruthy();
     expect(screen.getByPlaceholderText("Добавить комментарий...")).toBeTruthy();
+  });
+
+  it("shows system charts as playlists with their completed period", async () => {
+    render(<App />);
+
+    fireEvent.click(await screen.findByTitle("Архив"));
+
+    expect(await screen.findByRole("heading", { name: "Топы прослушиваний" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(chart.title) }));
+
+    expect(await screen.findByRole("heading", { level: 1, name: chart.title })).toBeTruthy();
+    expect(screen.getAllByText(/01 авг.*31 авг/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(track.title)).toBeTruthy();
   });
 });

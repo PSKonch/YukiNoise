@@ -1,13 +1,14 @@
+from datetime import date
 from typing import Any, Sequence
 from uuid import UUID
 
-from sqlalchemy import and_, delete, func, literal, or_, select, text, update
+from sqlalchemy import and_, case, delete, func, literal, or_, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager, selectinload
 from sqlalchemy.sql.elements import ColumnElement
 
-from yn.modules.playlists.enums import PlaylistType
+from yn.modules.playlists.enums import PlaylistType, SystemPlaylistKey
 from yn.modules.playlists.errors import (
     PlaylistAccessDeniedError,
     PlaylistConflictError,
@@ -77,6 +78,15 @@ class PlaylistsRepository:
         return result.scalar_one_or_none()
 
     async def get_playlists(self, *, limit: int, offset: int) -> Sequence[Playlist]:
+        chart_order = case(
+            {
+                SystemPlaylistKey.TOP_DAY.value: 0,
+                SystemPlaylistKey.TOP_WEEK.value: 1,
+                SystemPlaylistKey.TOP_MONTH.value: 2,
+            },
+            value=self.model.system_key,
+            else_=3,
+        )
         stmt = (
             select(self.model)
             .where(
@@ -85,7 +95,7 @@ class PlaylistsRepository:
                     self.model.deleted_at.is_(None),
                 )
             )
-            .order_by(self.model.created_at.desc())
+            .order_by(chart_order.asc(), self.model.created_at.desc())
             .limit(limit)
             .offset(offset)
         )
@@ -110,7 +120,11 @@ class PlaylistsRepository:
                     Release.publicly_visible_clause(),
                 )
             )
-            .order_by(self.auxiliary_model.added_at.asc())
+            .order_by(
+                self.auxiliary_model.position.asc(),
+                self.auxiliary_model.added_at.asc(),
+                self.auxiliary_model.track_id.asc(),
+            )
             .limit(limit)
             .offset(offset)
         )
@@ -137,7 +151,11 @@ class PlaylistsRepository:
                     Release.publicly_visible_clause(),
                 )
             )
-            .order_by(self.auxiliary_model.added_at.asc(), Track.id.asc())
+            .order_by(
+                self.auxiliary_model.position.asc(),
+                self.auxiliary_model.added_at.asc(),
+                Track.id.asc(),
+            )
         )
         result = await self._session.execute(stmt)
         return result.scalars().all()
@@ -204,7 +222,11 @@ class PlaylistsRepository:
                     Track.deleted_at.is_(None),
                 )
             )
-            .order_by(self.auxiliary_model.added_at.asc())
+            .order_by(
+                self.auxiliary_model.position.asc(),
+                self.auxiliary_model.added_at.asc(),
+                self.auxiliary_model.track_id.asc(),
+            )
             .limit(limit)
             .offset(offset)
         )
@@ -249,6 +271,61 @@ class PlaylistsRepository:
             )
         )
         await self._session.execute(stmt)
+
+    async def replace_system_chart(
+        self,
+        *,
+        system_key: SystemPlaylistKey,
+        title: str,
+        description: str,
+        period_start: date,
+        period_end: date,
+        track_ids: Sequence[UUID],
+    ) -> None:
+        insert_statement = pg_insert(self.model).values(
+            artist_id=None,
+            title=title,
+            description=description,
+            is_private=False,
+            playlist_type=PlaylistType.SYSTEM,
+            system_key=system_key.value,
+            period_start=period_start,
+            period_end=period_end,
+        )
+        playlist_statement = insert_statement.on_conflict_do_update(
+            index_elements=[self.model.system_key],
+            index_where=text("system_key IS NOT NULL"),
+            set_={
+                "title": insert_statement.excluded.title,
+                "description": insert_statement.excluded.description,
+                "is_private": False,
+                "playlist_type": PlaylistType.SYSTEM,
+                "period_start": insert_statement.excluded.period_start,
+                "period_end": insert_statement.excluded.period_end,
+                "deleted_at": None,
+                "updated_at": func.now(),
+            },
+        ).returning(self.model.id)
+        playlist_id = (await self._session.execute(playlist_statement)).scalar_one()
+
+        await self._session.execute(
+            delete(self.auxiliary_model).where(
+                self.auxiliary_model.playlist_id == playlist_id
+            )
+        )
+        if track_ids:
+            await self._session.execute(
+                pg_insert(self.auxiliary_model).values(
+                    [
+                        {
+                            "playlist_id": playlist_id,
+                            "track_id": track_id,
+                            "position": position,
+                        }
+                        for position, track_id in enumerate(track_ids, start=1)
+                    ]
+                )
+            )
 
     async def add_track_to_system_favs(
         self,

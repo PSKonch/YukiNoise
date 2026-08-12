@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -16,8 +16,11 @@ class PlaylistCreate(BaseModel):
 
 class PlaylistRead(PlaylistCreate):
     id: UUID
-    artist_id: UUID
+    artist_id: UUID | None
     playlist_type: PlaylistType = PlaylistType.USER
+    system_key: str | None = None
+    period_start: date | None = None
+    period_end: date | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
     deleted_at: datetime | None = None
@@ -36,6 +39,7 @@ class PlaylistTrackRead(BaseModel):
     playlist_id: UUID
     track_id: UUID
     added_at: datetime | None = None
+    position: int = 0
     track: TrackRead | None = None
 
     model_config = ConfigDict(from_attributes=True)

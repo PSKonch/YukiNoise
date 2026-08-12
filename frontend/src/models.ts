@@ -75,12 +75,15 @@ export type LikeTargetType = "track" | "release" | "playlist" | "post" | "commen
 
 export interface Playlist {
   id: string;
-  artist_id: string;
+  artist_id: string | null;
   title: string;
   description: string | null;
   cover_url: string | null;
   is_private: boolean;
   playlist_type: "system" | "user";
+  system_key: "top_day" | "top_week" | "top_month" | null;
+  period_start: string | null;
+  period_end: string | null;
   created_at: string | null;
   updated_at: string | null;
   deleted_at: string | null;
@@ -90,6 +93,7 @@ export interface PlaylistTrack {
   playlist_id: string;
   track_id: string;
   added_at: string | null;
+  position: number;
   track: Track | null;
 }
 

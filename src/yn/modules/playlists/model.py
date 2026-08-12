@@ -1,10 +1,10 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import TYPE_CHECKING
 from uuid import UUID as PyUUID
 from uuid import uuid4
 
 from sqlalchemy import UUID as SA_UUID
-from sqlalchemy import Enum, ForeignKey, Index, func, text
+from sqlalchemy import Date, Enum, ForeignKey, Index, Integer, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from yn.modules.playlists.enums import PlaylistType
@@ -25,15 +25,21 @@ class Playlist(Base):
             unique=True,
             postgresql_where=text("playlist_type = 'SYSTEM'"),
         ),
+        Index(
+            "uq_playlists_system_key",
+            "system_key",
+            unique=True,
+            postgresql_where=text("system_key IS NOT NULL"),
+        ),
     )
 
     id: Mapped[PyUUID] = mapped_column(
         SA_UUID(as_uuid=True), primary_key=True, default=uuid4
     )
-    artist_id: Mapped[PyUUID] = mapped_column(
+    artist_id: Mapped[PyUUID | None] = mapped_column(
         SA_UUID(as_uuid=True),
         ForeignKey("artists.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
     title: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[str | None] = mapped_column(nullable=True)
@@ -43,6 +49,9 @@ class Playlist(Base):
         nullable=False,
         default=PlaylistType.USER,
     )
+    system_key: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    period_start: Mapped[date | None] = mapped_column(Date, nullable=True)
+    period_end: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     cover_url: Mapped[str | None] = mapped_column(nullable=True)
 
@@ -55,7 +64,7 @@ class Playlist(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
     # relationships
-    artist: Mapped["Artist"] = relationship("Artist", back_populates="playlists")
+    artist: Mapped["Artist | None"] = relationship("Artist", back_populates="playlists")
     tracks: Mapped[list["PlaylistTrack"]] = relationship(
         "PlaylistTrack", back_populates="playlist", cascade="all, delete-orphan"
     )
@@ -79,6 +88,12 @@ class PlaylistTrack(Base):
     )
     added_at: Mapped[datetime] = mapped_column(
         nullable=False, server_default=func.now()
+    )
+    position: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default=text("0"),
     )
 
     # relationships

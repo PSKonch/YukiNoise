@@ -33,6 +33,19 @@ function formatDate(value?: string | null): string {
   return new Intl.DateTimeFormat("ru", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
 }
 
+function formatPlaylistPeriod(playlist: Playlist): string | null {
+  if (!playlist.period_start || !playlist.period_end) return null;
+  const end = new Date(`${playlist.period_end}T00:00:00Z`);
+  end.setUTCDate(end.getUTCDate() - 1);
+  const startLabel = formatDate(`${playlist.period_start}T00:00:00Z`);
+  const endLabel = formatDate(end.toISOString());
+  return startLabel === endLabel ? startLabel : `${startLabel} — ${endLabel}`;
+}
+
+function chartLabel(playlist: Playlist): string {
+  return ({ top_day: "DAILY TOP", top_week: "WEEKLY TOP", top_month: "MONTHLY TOP" } as Record<string, string>)[playlist.system_key || ""] || "SYSTEM";
+}
+
 function formatDuration(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds) % 60).padStart(2, "0")}`;
 }
@@ -106,17 +119,18 @@ interface EngagementProps {
   notify(message: string): void;
 }
 
-function TrackList({ tracks, contextType = "track", contextId, onSelect, engagement }: {
+function TrackList({ tracks, contextType = "track", contextId, onSelect, engagement, ranked = false }: {
   tracks: Track[];
   contextType?: ContextType;
   contextId?: string;
   onSelect?(track: Track): void;
   engagement?: EngagementProps;
+  ranked?: boolean;
 }) {
   return <div className="track-list">
     {tracks.map((track, index) => <div className="track-line" key={track.id} onClick={() => onSelect?.(track)}>
       <PlayTrackButton track={track} contextType={contextType} contextId={contextId} />
-      <span className="track-index">{String(track.track_number_in_release || index + 1).padStart(2, "0")}</span>
+      <span className="track-index">{String(ranked ? index + 1 : track.track_number_in_release || index + 1).padStart(2, "0")}</span>
       <div><strong>{track.title}</strong><small>{track.genres.length ? track.genres.join(" / ") : "genre: unknown"}</small></div>
       <span>{formatDuration(track.duration_seconds)}</span>
       {engagement && <LikeButton targetType="track" targetId={track.id} {...engagement} compact />}
@@ -404,10 +418,15 @@ function LibraryView({ onSelect, engagement }: { onSelect(selection: EntitySelec
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => { Promise.all([request<Playlist[]>(`/playlists/?${LIMIT}`), request<Track[]>(`/tracks/?${LIMIT}`)]).then(([a, b]) => { setPlaylists(a); setTracks(b); }).finally(() => setLoading(false)); }, [request]);
+  const charts = playlists.filter((playlist) => playlist.system_key);
+  const curated = playlists.filter((playlist) => !playlist.system_key);
   return <section className="page-section">
-    <div className="page-hero"><span className="micro">ARCHIVE / ALL FREQUENCIES</span><h1>Архив</h1><p>Плейлисты и отдельные треки без алгоритмической магии.</p></div>
+    <div className="page-hero"><span className="micro">ARCHIVE / ALL FREQUENCIES</span><h1>Архив</h1><p>Системные топы, плейлисты и отдельные треки.</p></div>
     <div className="segmented"><button className={tab === "playlists" ? "active" : ""} onClick={() => setTab("playlists")}>ПЛЕЙЛИСТЫ <span>{playlists.length}</span></button><button className={tab === "tracks" ? "active" : ""} onClick={() => setTab("tracks")}>ТРЕКИ <span>{tracks.length}</span></button></div>
-    {loading ? <Loading /> : tab === "playlists" ? <div className="playlist-grid">{playlists.map((playlist) => <button className="playlist-tile" key={playlist.id} onClick={() => onSelect({ type: "playlist", value: playlist })}><i className={coverClass(playlist.id)}><span>≋</span></i><div><small>{playlist.playlist_type} / {playlist.is_private ? "private" : "public"}</small><h2>{playlist.title}</h2><p>{playlist.description || "Без описания"}</p></div><b>↗</b></button>)}</div> : <TrackList tracks={tracks} engagement={engagement} />}
+    {loading ? <Loading /> : tab === "playlists" ? <>
+      {charts.length > 0 && <div className="chart-playlists"><SectionTitle code="CHARTS / UTC" title="Топы прослушиваний" aside={<span className="section-note">завершённые периоды</span>} /><div className="playlist-grid">{charts.map((playlist) => <button className="playlist-tile playlist-tile--chart" key={playlist.id} onClick={() => onSelect({ type: "playlist", value: playlist })}><i className={coverClass(playlist.id)}><span>↑</span></i><div><small>{chartLabel(playlist)} / {formatPlaylistPeriod(playlist) || "ожидает обновления"}</small><h2>{playlist.title}</h2><p>{playlist.description || "Без описания"}</p></div><b>↗</b></button>)}</div></div>}
+      {curated.length > 0 && <div className="curated-playlists"><SectionTitle code="CURATED" title="Остальные плейлисты" /><div className="playlist-grid">{curated.map((playlist) => <button className="playlist-tile" key={playlist.id} onClick={() => onSelect({ type: "playlist", value: playlist })}><i className={coverClass(playlist.id)}><span>≋</span></i><div><small>{playlist.playlist_type} / {playlist.is_private ? "private" : "public"}</small><h2>{playlist.title}</h2><p>{playlist.description || "Без описания"}</p></div><b>↗</b></button>)}</div></div>}
+    </> : <TrackList tracks={tracks} engagement={engagement} />}
   </section>;
 }
 
@@ -551,7 +570,7 @@ function EntityDetail({ selection, onClose, onSelect, engagement }: {
     </div>}
     {selection.type === "release" && <div className="detail-page">{loading || !release ? <Loading /> : <><div className="release-detail-head"><div className={`cover-art ${coverClass(release.id)}`}><span className="cover-code">YN-{release.id.slice(0, 4)}</span><strong>{initials(release.title)}</strong><i /><em>{release.release_type}</em></div><div><span className="micro">{release.status} / {release.release_type}</span><h1>{release.title}</h1><p className="release-author">{release.author_name || "independent artist"}</p><p>{release.description || "Описание не передано."}</p><div className="detail-actions">{release.tracks?.[0] && <PlayTrackButton track={release.tracks[0]} contextType="release" contextId={release.id} label />}<LikeButton targetType="release" targetId={release.id} {...engagement} /></div></div></div><SectionTitle code="TRACKLIST" title={`${release.tracks?.length || 0} tracks`} /><TrackList tracks={release.tracks || []} contextType="release" contextId={release.id} engagement={engagement} /></>}</div>}
     {selection.type === "post" && <article className="post-detail"><span className="micro">PUBLIC LOG / {formatDate(selection.value.created_at)}</span><h1>{selection.value.title}</h1><div className="post-by">by {selection.value.author_name || "unknown artist"}</div><LikeButton targetType="post" targetId={selection.value.id} {...engagement} /><p>{selection.value.content}</p><CommentaryThread postId={selection.value.id} {...engagement} /></article>}
-    {selection.type === "playlist" && <div className="detail-page"><div className="playlist-detail-head"><i className={coverClass(selection.value.id)}>≋</i><div><span className="micro">{selection.value.playlist_type} / {selection.value.is_private ? "PRIVATE" : "PUBLIC"}</span><h1>{selection.value.title}</h1><p>{selection.value.description || "Без описания."}</p><LikeButton targetType="playlist" targetId={selection.value.id} {...engagement} /></div></div>{loading ? <Loading /> : <TrackList tracks={playlistTracks} contextType="playlist" contextId={selection.value.id} engagement={engagement} />}</div>}
+    {selection.type === "playlist" && <div className="detail-page"><div className="playlist-detail-head"><i className={coverClass(selection.value.id)}>{selection.value.system_key ? "↑" : "≋"}</i><div><span className="micro">{selection.value.system_key ? `${chartLabel(selection.value)} / ${formatPlaylistPeriod(selection.value) || "ОЖИДАЕТ ОБНОВЛЕНИЯ"}` : `${selection.value.playlist_type} / ${selection.value.is_private ? "PRIVATE" : "PUBLIC"}`}</span><h1>{selection.value.title}</h1><p>{selection.value.description || "Без описания."}</p><LikeButton targetType="playlist" targetId={selection.value.id} {...engagement} /></div></div>{loading ? <Loading /> : <TrackList tracks={playlistTracks} contextType="playlist" contextId={selection.value.id} engagement={engagement} ranked={Boolean(selection.value.system_key)} />}</div>}
   </Modal>;
 }
 
