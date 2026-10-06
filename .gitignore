@@ -177,6 +177,7 @@ venv.bak/
 
 # mkdocs documentation
 /site
+LLM_RAG_STUDY_GUIDE.md
 
 # mypy
 .mypy_cache/

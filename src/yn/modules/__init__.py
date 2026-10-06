@@ -1,5 +1,6 @@
 from yn.modules.artists.model import Artist
 from yn.modules.commentaries.model import Commentary
+from yn.modules.discovery.model import TrackEmbedding
 from yn.modules.follows.model import Follow
 from yn.modules.likes.model import Like
 from yn.modules.notifications.model import Notification
@@ -21,4 +22,5 @@ __all__ = [
     "Playlist",
     "PlaylistTrack",
     "Commentary",
+    "TrackEmbedding",
 ]
