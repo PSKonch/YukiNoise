@@ -82,6 +82,13 @@ class Settings(BaseSettings):
     def redis_url(self) -> str:
         return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
+    llm_api_key: str = ""
+    llm_generation_model: str = "llama-3.3-70b-versatile"
+    discovery_enabled: bool = False
+    discovery_retrieval_limit: int = 20
+    discovery_provider_timeout_seconds: float = 15.0
+    discovery_request_timeout_seconds: float = 45.0
+
     model_config = SettingsConfigDict(env_file=".env")
 
 
