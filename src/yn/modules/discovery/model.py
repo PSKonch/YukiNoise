@@ -23,6 +23,6 @@ class TrackEmbedding(Base):
     document_schema_version: Mapped[str] = mapped_column(nullable=False)
     embedding_model: Mapped[str] = mapped_column(nullable=False)
     embedding_dimension: Mapped[int] = mapped_column(nullable=False)
-    embedding_vector: Mapped[Vector] = mapped_column(Vector(1536), nullable=False)
+    embedding_vector: Mapped[Vector] = mapped_column(Vector(768), nullable=False)
 
     indexed_at: Mapped[str] = mapped_column(nullable=False, server_default=func.now())

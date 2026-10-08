@@ -1,11 +1,12 @@
 from dataclasses import dataclass
+from uuid import UUID
 
 from yn.modules.discovery.document_builder import TrackIndexSource
 
 
 @dataclass(frozen=True, slots=True)
 class TrackCandidateDTO:
-    track_id: str
+    track_id: UUID
     source: TrackIndexSource
     document_text: str
     content_hash: str
@@ -14,7 +15,7 @@ class TrackCandidateDTO:
 
 @dataclass(frozen=True, slots=True)
 class SearchTrackDTO:
-    track_id: str
+    track_id: UUID
     track_title: str
     artist_name: str
     release_title: str
