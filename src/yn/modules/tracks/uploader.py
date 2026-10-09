@@ -9,6 +9,7 @@ from uuid import UUID
 
 from fastapi import UploadFile
 
+from yn.modules.discovery.events import request_track_index
 from yn.modules.releases.service import ReleaseService
 from yn.modules.tracks.dto import TrackDTO
 from yn.modules.tracks.errors import (
@@ -148,6 +149,7 @@ class TrackUploadProcessor:
                 path=payload.storage_key,
                 genres=payload.genres,
             )
+            await request_track_index(self.uow, track.id)
             await self.uow.commit()
         except TrackConflictError:
             await self._safe_delete_from_storage(payload.storage_key)

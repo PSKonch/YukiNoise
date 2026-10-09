@@ -7,6 +7,7 @@ from yn.modules.artists.errors import (
     ArtistDisplayedNameTakenError,
 )
 from yn.modules.artists.events import ARTIST_EVENTS_TOPIC, ArtistCreatedEvent
+from yn.modules.discovery.events import request_artist_index
 from yn.modules.playlists.dto import PlaylistDTO
 from yn.modules.posts.dto import PostDTO
 from yn.modules.releases.dto import ReleaseDTO
@@ -236,6 +237,8 @@ class ArtistService:
             social_links=social_links,
         )
         if updated:
+            if artist is not None and (displayed_name is not None or bio is not None):
+                await request_artist_index(self.uow, artist.id)
             await self.uow.commit()
         if updated and artist is not None:
             await self._invalidate_artist(artist.id)

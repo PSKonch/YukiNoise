@@ -84,7 +84,7 @@ def test_refresh_replaces_chart_and_commits() -> None:
         playlists.replace_system_chart.assert_awaited_once_with(
             system_key=SystemPlaylistKey.TOP_MONTH,
             title="Топ месяца",
-            description="Самые прослушиваемые треки за завершённый месяц.",
+            description="Самые прослушиваемые треки за месяц",
             period_start=date(2026, 8, 1),
             period_end=date(2026, 9, 1),
             track_ids=track_ids,

@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 
 from fastapi import UploadFile
 
+from yn.modules.discovery.events import request_track_index
 from yn.modules.releases.service import ReleaseService
 from yn.modules.tracks.dto import TrackDTO, TrackUploadQueuedDTO
 from yn.modules.tracks.errors import (
@@ -153,6 +154,7 @@ class TrackService:
         )
         if updated is None:
             raise TrackNotFoundError
+        await request_track_index(self.uow, updated.id)
         await self.uow.commit()
         return TrackDTO.from_orm(updated)
 
@@ -168,6 +170,7 @@ class TrackService:
         )
         if not deleted:
             raise TrackNotFoundError
+        await request_track_index(self.uow, track.id)
         await self.uow.commit()
 
     # Validation helpers

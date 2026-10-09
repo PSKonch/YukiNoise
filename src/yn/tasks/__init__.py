@@ -4,7 +4,7 @@ from yn.tasks.chart_playlists import (
     refresh_monthly_chart,
     refresh_weekly_chart,
 )
-from yn.tasks.index_track import index_track_embedding
+from yn.tasks.index_track import index_source_embeddings, index_track_embedding
 from yn.tasks.release_cover_upload import process_release_cover_upload
 from yn.tasks.release_due_releases import release_due_releases
 from yn.tasks.track_upload import process_track_upload
@@ -18,4 +18,5 @@ __all__ = [
     "refresh_weekly_chart",
     "release_due_releases",
     "index_track_embedding",
+    "index_source_embeddings",
 ]

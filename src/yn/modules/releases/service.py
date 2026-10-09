@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import UploadFile
 
+from yn.modules.discovery.events import request_release_index
 from yn.modules.releases.dto import ReleaseDTO, ReleaseWithTracksAndAuthorDTO
 from yn.modules.releases.enums import ReleaseStatus, ReleaseType
 from yn.modules.releases.errors import (
@@ -175,6 +176,7 @@ class ReleaseService:
                 expected_status=ReleaseStatus.DRAFT,
             )
             raise ReleaseNotFoundError
+        await request_release_index(self.uow, release_id)
         await self.uow.commit()
         return ReleaseDTO.from_orm(updated_release)
 
@@ -199,6 +201,7 @@ class ReleaseService:
                 expected_status=ReleaseStatus.DRAFT,
             )
             raise ReleaseNotFoundError
+        await request_release_index(self.uow, release_id)
         await self.uow.commit()
         return ReleaseDTO.from_orm(updated_release)
 
@@ -219,6 +222,7 @@ class ReleaseService:
                 expected_status=ReleaseStatus.SCHEDULED,
             )
             raise ReleaseNotFoundError
+        await request_release_index(self.uow, release_id)
         await self.uow.commit()
         return ReleaseDTO.from_orm(updated_release)
 

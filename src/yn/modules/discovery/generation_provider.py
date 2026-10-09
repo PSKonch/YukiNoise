@@ -11,6 +11,7 @@ from pydantic import SecretStr, ValidationError
 from yn.modules.discovery.dto import TrackCandidateDTO
 from yn.modules.discovery.errors import (
     DiscoveryInvalidModelOutputError,
+    DiscoveryProviderUnavailableError,
 )
 from yn.modules.discovery.prompts import CURATOR_INPUT, CURATOR_INSTRUCTIONS
 from yn.modules.discovery.schemas import GeneratedCuration
@@ -62,7 +63,7 @@ class GroqCurationGenerator:
             [
                 {
                     "track_id": str(c.track_id),
-                    "document_text": c.document_text,
+                    "document_text": c.document_text[:4000],
                     "available_sources": available_sources(c),
                 }
                 for c in candidates
@@ -79,6 +80,8 @@ class GroqCurationGenerator:
             raise DiscoveryInvalidModelOutputError(
                 detail=f"Failed to parse model output: {e}"
             ) from e
+        except Exception as e:
+            raise DiscoveryProviderUnavailableError from e
 
         if not isinstance(result, GeneratedCuration):
             raise DiscoveryInvalidModelOutputError(

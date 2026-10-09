@@ -12,6 +12,7 @@ from yn.modules.artists.route import router as artists_router
 from yn.modules.auth.route import router as auth_router
 from yn.modules.commentaries.route import router as commentaries_router
 from yn.modules.discovery.kafka import router as discovery_kafka_router
+from yn.modules.discovery.route import router as discovery_router
 from yn.modules.follows.route import router as follows_router
 from yn.modules.likes.route import router as likes_router
 from yn.modules.playback.deps import (
@@ -129,6 +130,7 @@ app.include_router(playlists_router)
 app.include_router(posts_router)
 app.include_router(releases_router)
 app.include_router(tracks_router)
+app.include_router(discovery_router)
 
 
 @app.get("/health/live")
