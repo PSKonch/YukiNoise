@@ -179,6 +179,7 @@ venv.bak/
 /site
 LLM_RAG_STUDY_GUIDE.md
 .discovery-backfill*.cursor
+music
 
 # mypy
 .mypy_cache/

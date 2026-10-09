@@ -41,6 +41,23 @@ Authenticated endpoints:
 - `POST /discovery/curations/preview`: the same request, with `LLM_API_KEY` and
   `LLM_GENERATION_MODEL` configured for Groq.
 
+In the frontend, open **Куратор** and sign in using the normal login dialog.
+Enter a mood or instruction, choose the number of tracks, and submit. The answer
+includes the curator's explanation for each selected track and playback buttons.
+An artist profile is not required.
+
+Keep the Groq key in the ignored `.env` file:
+
+```dotenv
+DISCOVERY_ENABLED=true
+LLM_API_KEY=your-groq-api-key
+LLM_GENERATION_MODEL=openai/gpt-oss-120b
+```
+
+The API key identifies your Groq account; the model is chosen separately by its
+ID. Restart the API after changing these settings. Docker Compose passes the
+settings to the API and enables indexing in the worker and scheduler.
+
 Search runs locally with E5 and does not require a generation API key. The first
 model initialization downloads its weights; later calls reuse the local cache.
 
@@ -69,7 +86,7 @@ npm install --ignore-scripts
 npm run dev
 ```
 
-Set `yukinoise.demo.access-token` in browser local storage before opening the demo.
+Sign in through the frontend login dialog to use playback and the curator.
 The API allows `http://localhost:5173` by default; override `CORS_ORIGINS` with a
 comma-separated list in other environments.
 

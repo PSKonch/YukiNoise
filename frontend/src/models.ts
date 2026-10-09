@@ -97,4 +97,16 @@ export interface PlaylistTrack {
   track: Track | null;
 }
 
-export type ViewName = "discover" | "artists" | "feed" | "library" | "studio" | "settings";
+export interface CuratedTrack {
+  track_id: string;
+  reason: string;
+  sources: string[];
+}
+
+export interface Curation {
+  title: string;
+  summary: string;
+  tracks: CuratedTrack[];
+}
+
+export type ViewName = "discover" | "curator" | "artists" | "feed" | "library" | "studio" | "settings";

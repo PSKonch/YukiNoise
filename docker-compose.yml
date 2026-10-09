@@ -209,6 +209,9 @@ services:
       APP_HOST: 0.0.0.0
       APP_PORT: 8000
       APP_WORKERS: 1
+      DISCOVERY_ENABLED: ${DISCOVERY_ENABLED:-false}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_GENERATION_MODEL: ${LLM_GENERATION_MODEL:-openai/gpt-oss-120b}
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
@@ -257,6 +260,7 @@ services:
       minio:
         condition: service_started
     environment:
+      DISCOVERY_ENABLED: ${DISCOVERY_ENABLED:-false}
       POSTGRES_PRIMARY_USER: postgres
       POSTGRES_PRIMARY_PASSWORD: postgres
       POSTGRES_PRIMARY_DB: yukinoise
@@ -298,6 +302,7 @@ services:
       minio:
         condition: service_started
     environment:
+      DISCOVERY_ENABLED: ${DISCOVERY_ENABLED:-false}
       POSTGRES_PRIMARY_USER: postgres
       POSTGRES_PRIMARY_PASSWORD: postgres
       POSTGRES_PRIMARY_DB: yukinoise

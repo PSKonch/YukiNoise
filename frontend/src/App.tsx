@@ -23,6 +23,7 @@ import type {
 import { PlaybackProvider, usePlaybackOptional } from "./PlaybackProvider";
 import { PlayerBar } from "./PlayerBar";
 import { QueuePanel } from "./QueuePanel";
+import { CuratorView } from "./CuratorView";
 import type { ContextType } from "./types";
 import "./app.css";
 
@@ -727,7 +728,7 @@ function Shell({ user, artist, onLogin, onLogout, onArtistChanged }: { user: Use
     notify("Создайте профиль артиста, чтобы участвовать в жизни сети");
   };
   const engagement: EngagementProps = { artist, onNeedIdentity, notify };
-  const nav: Array<[ViewName, string, string]> = [["discover", "⌂", "Эфир"], ["artists", "◎", "Артисты"], ["feed", "▤", "Дневники"], ["library", "≋", "Архив"]];
+  const nav: Array<[ViewName, string, string]> = [["discover", "⌂", "Эфир"], ["curator", "✳", "Куратор"], ["artists", "◎", "Артисты"], ["feed", "▤", "Дневники"], ["library", "≋", "Архив"]];
   if (user) nav.push(["studio", "◈", "Студия"], ["settings", "⚙", "Настройки"]);
   return <div className={`site-shell ${user ? "is-authenticated" : ""}`}>
     <div className="crt-lines" />
@@ -735,6 +736,7 @@ function Shell({ user, artist, onLogin, onLogout, onArtistChanged }: { user: Use
     <aside className="side-nav"><div className="nav-frequency"><span>FREQ</span><strong>19.98</strong><i /></div><nav>{nav.map(([name, icon, label]) => <button key={name} className={view === name ? "active" : ""} onClick={() => setView(name)} title={label}><span>{icon}</span><em>{label}</em></button>)}</nav><div className="nav-footer"><span>NODE<br />{user ? user.id.slice(0, 6).toUpperCase() : "GUEST"}</span><i>●</i></div></aside>
     <main className="main-content">
       {view === "discover" && <Discover onSelect={setSelection} />}
+      {view === "curator" && <CuratorView onLogin={onLogin} />}
       {view === "artists" && <ArtistsView onSelect={setSelection} />}
       {view === "feed" && <FeedView onSelect={setSelection} />}
       {view === "library" && <LibraryView onSelect={setSelection} engagement={engagement} />}
