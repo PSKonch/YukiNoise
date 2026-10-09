@@ -20,6 +20,7 @@ from yn.modules.tracks.uploader import (
     validate_track_filename,
     validate_track_number_in_release,
 )
+from yn.modules.tracks.validation import validate_featured_artists
 from yn.shared.unit_of_work import UnitOfWork
 from yn.tasks.track_upload import process_track_upload
 
@@ -78,6 +79,7 @@ class TrackService:
         track_number_in_release: int,
         genres: list[str],
         file: UploadFile,
+        featured_artist_ids: list[UUID] | None = None,
     ) -> TrackUploadQueuedDTO:
         await self.release_service.get_owned_draft_release_by_id(
             release_id=release_id,
@@ -86,6 +88,11 @@ class TrackService:
 
         validate_track_number_in_release(track_number_in_release)
         validate_track_filename(file.filename)
+        await validate_featured_artists(
+            self.uow,
+            artist_id=current_artist_id,
+            featured_artist_ids=featured_artist_ids or [],
+        )
         await self._ensure_track_is_available(
             release_id=release_id,
             title=title,
@@ -111,6 +118,7 @@ class TrackService:
                     genres=genres,
                     storage_key=storage_key,
                     temp_path=temp_path,
+                    featured_artist_ids=featured_artist_ids or [],
                 ).to_message()
             )
         except Exception as exc:
@@ -122,6 +130,7 @@ class TrackService:
             release_id=release_id,
             title=title,
             track_number_in_release=track_number_in_release,
+            featured_artist_ids=featured_artist_ids or [],
         )
 
     async def update_track(
@@ -132,8 +141,14 @@ class TrackService:
         title: str | None = None,
         track_number_in_release: int | None = None,
         genres: list[str] | None = None,
+        featured_artist_ids: list[UUID] | None = None,
     ) -> TrackDTO:
-        if title is None and track_number_in_release is None and genres is None:
+        if (
+            title is None
+            and track_number_in_release is None
+            and genres is None
+            and featured_artist_ids is None
+        ):
             raise EmptyTrackUpdateError
 
         track = await self._get_owned_track(track_id=track_id, artist_id=artist_id)
@@ -144,6 +159,12 @@ class TrackService:
 
         if track_number_in_release is not None:
             validate_track_number_in_release(track_number_in_release)
+        if featured_artist_ids is not None:
+            await validate_featured_artists(
+                self.uow,
+                artist_id=artist_id,
+                featured_artist_ids=featured_artist_ids,
+            )
 
         updated = await self.uow.tracks.update(
             track_id=track.id,
@@ -151,6 +172,7 @@ class TrackService:
             title=title,
             track_number_in_release=track_number_in_release,
             genres=genres,
+            featured_artist_ids=featured_artist_ids,
         )
         if updated is None:
             raise TrackNotFoundError

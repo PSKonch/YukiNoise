@@ -1,7 +1,7 @@
 from typing import Sequence
 from uuid import UUID
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,6 +34,11 @@ class TrackEmbeddingRepository:
             artist_bio=artist.bio,
             release_title=release.title,
             release_description=release.description,
+            featured_artist_names=tuple(
+                featured_artist.displayed_name
+                for featured_artist in track.featured_artists
+                if featured_artist.deleted_at is None
+            ),
         )
 
     async def get_source(
@@ -123,7 +128,10 @@ class TrackEmbeddingRepository:
             query = query.where(Track.release_id == release_id)
         if artist_id is not None:
             query = query.join(Release, Release.id == Track.release_id).where(
-                Release.artist_id == artist_id
+                or_(
+                    Release.artist_id == artist_id,
+                    Track.featured_artists.any(Artist.id == artist_id),
+                )
             )
         if after is not None:
             query = query.where(Track.id > after)

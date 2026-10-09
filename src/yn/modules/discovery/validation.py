@@ -15,6 +15,7 @@ def available_sources(candidate: TrackCandidateDTO) -> list[SourceField]:
             ", ".join(genre.strip() for genre in source.genres if genre.strip()),
         ),
         ("artist.displayed_name", source.artist_name),
+        ("track.featured_artists", ", ".join(source.featured_artist_names)),
         ("artist.bio", source.artist_bio),
         ("release.title", source.release_title),
         ("release.description", source.release_description),

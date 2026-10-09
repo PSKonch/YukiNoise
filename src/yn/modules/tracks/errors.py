@@ -41,3 +41,9 @@ class EmptyTrackUpdateError(AppError):
     status_code = 400
     code = "empty_track_update"
     detail = "At least one field must be provided"
+
+
+class InvalidTrackFeaturesError(AppError):
+    status_code = 400
+    code = "invalid_track_features"
+    detail = "Featured artists must be unique and must not include the release artist"

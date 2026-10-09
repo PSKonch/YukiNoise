@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 SourceField = Literal[
     "track.title",
     "track.genres",
+    "track.featured_artists",
     "artist.displayed_name",
     "artist.bio",
     "release.title",
@@ -39,7 +40,7 @@ class SearchTrackRead(BaseModel):
 class GeneratedTrack(BaseModel):
     track_id: UUID
     reason: str = Field(min_length=1, max_length=300)
-    sources: list[SourceField] = Field(min_length=1, max_length=6)
+    sources: list[SourceField] = Field(min_length=1, max_length=7)
 
     model_config = ConfigDict(extra="forbid")
 

@@ -33,6 +33,13 @@ class ArtistRepository:
         result = await self._session.execute(query)
         return result.scalar_one_or_none()
 
+    async def get_artists_by_ids(self, artist_ids: list[UUID]) -> Sequence[Artist]:
+        query = select(self.model).where(
+            and_(self.model.id.in_(artist_ids), self.model.deleted_at.is_(None))
+        )
+        result = await self._session.execute(query)
+        return result.scalars().all()
+
     async def get_artist_by_displayed_name(self, displayed_name: str) -> Artist | None:
         query = select(self.model).where(self.model.displayed_name == displayed_name)
         result = await self._session.execute(query)

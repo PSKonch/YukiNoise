@@ -73,6 +73,20 @@ available, then run `pytest tests/modules/discovery/test_postgres.py`.
 - Release covers are queued through Taskiq and uploaded to MinIO in the worker.
 - Scheduled releases are handled by the Taskiq scheduler; run it with `taskiq scheduler yn.tasks.scheduler:scheduler yn.tasks`.
 
+## Featured artists
+
+Apply the migration with `./venv/bin/alembic upgrade head`.
+Track uploads accept repeated `featured_artist_ids` fields in multipart form data.
+`PATCH /tracks/{track_id}` accepts `{"featured_artist_ids": ["artist-uuid"]}`;
+an empty list removes all features, and an omitted field keeps them unchanged.
+Only the release owner can edit tracks, and the release must be a draft.
+Featured artists must exist, be active, be unique, and differ from the release owner.
+
+Track responses, including tracks nested in releases and playlists, include
+`featured_artists` with each artist's `id` and `displayed_name`. Public artist track
+lists include both their own tracks and features. Featured artists also participate
+in discovery indexing; changing their name reindexes the related tracks.
+
 ## Player module
 
 The Spotify-style player API is available below `/me/player`. Live state and queue

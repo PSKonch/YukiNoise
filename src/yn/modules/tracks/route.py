@@ -155,6 +155,7 @@ async def upload_track(
     track_number_in_release: Annotated[int, Form(...)],
     file: Annotated[UploadFile, File(...)],
     genres: Annotated[list[str] | None, Form()] = None,
+    featured_artist_ids: Annotated[list[UUID] | None, Form()] = None,
 ) -> TrackUploadAccepted:
     if current_user.artist_id is None:
         raise ArtistNotFoundError
@@ -166,6 +167,7 @@ async def upload_track(
         track_number_in_release=track_number_in_release,
         genres=genres or [],
         file=file,
+        featured_artist_ids=featured_artist_ids,
     )
     return TrackUploadAccepted.model_validate(track, from_attributes=True)
 
@@ -184,6 +186,7 @@ async def update_track(
         payload.title is None
         and payload.track_number_in_release is None
         and payload.genres is None
+        and payload.featured_artist_ids is None
     ):
         raise EmptyTrackUpdateError
 
@@ -193,6 +196,7 @@ async def update_track(
         title=payload.title,
         track_number_in_release=payload.track_number_in_release,
         genres=payload.genres,
+        featured_artist_ids=payload.featured_artist_ids,
     )
     return TrackRead.model_validate(track, from_attributes=True)
 

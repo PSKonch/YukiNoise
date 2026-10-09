@@ -7,7 +7,7 @@ from yn.modules.artists.errors import (
     ArtistDisplayedNameTakenError,
 )
 from yn.modules.artists.events import ARTIST_EVENTS_TOPIC, ArtistCreatedEvent
-from yn.modules.discovery.events import request_artist_index
+from yn.modules.discovery.events import request_artist_index, request_track_index
 from yn.modules.playlists.dto import PlaylistDTO
 from yn.modules.posts.dto import PostDTO
 from yn.modules.releases.dto import ReleaseDTO
@@ -246,6 +246,15 @@ class ArtistService:
 
     async def hard_delete_artist(self, user_id: UUID) -> bool:
         artist = await self.uow.artists.get_artist_by_user_id(user_id)
+        if artist is not None and settings.discovery_enabled:
+            # Capture related tracks before cascading deletion removes the features.
+            after = None
+            while track_ids := await self.uow.track_embeddings.get_track_ids(
+                artist_id=artist.id, after=after, limit=100
+            ):
+                for track_id in track_ids:
+                    await request_track_index(self.uow, track_id)
+                after = track_ids[-1]
         deleted = await self.uow.artists.hard_delete_artist(user_id)
         if deleted:
             await self.uow.commit()

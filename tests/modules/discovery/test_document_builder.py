@@ -109,6 +109,24 @@ def test_track_id_does_not_affect_text_or_hash(source: TrackIndexSource) -> None
     assert updated.content_hash == original.content_hash
 
 
+def test_featured_artists_change_document_and_hash(source: TrackIndexSource) -> None:
+    original = DocumentBuilder(source).build()
+    updated = DocumentBuilder(
+        replace(source, featured_artist_names=("Guest B", "Guest A"))
+    ).build()
+
+    assert "Featured artists: Guest A, Guest B" in updated.text
+    assert updated.content_hash != original.content_hash
+    assert (
+        updated
+        == DocumentBuilder(
+            replace(
+                source, featured_artist_names=(" Guest A ", "Guest B", "Guest A", "")
+            )
+        ).build()
+    )
+
+
 def test_schema_version_changes_hash(source: TrackIndexSource) -> None:
     class NextVersionBuilder(DocumentBuilder):
         SCHEMA_VERSION = 2

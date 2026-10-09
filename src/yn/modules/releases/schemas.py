@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 from yn.modules.releases.enums import ReleaseType
+from yn.modules.tracks.schemas import FeaturedArtistRead
 
 
 class TrackRead(BaseModel):
@@ -13,6 +14,7 @@ class TrackRead(BaseModel):
     duration_seconds: int
     path: str
     genres: list[str]
+    featured_artists: list[FeaturedArtistRead] = []
     created_at: datetime | None = None
     deleted_at: datetime | None = None
 

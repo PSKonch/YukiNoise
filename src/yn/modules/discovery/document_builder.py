@@ -11,6 +11,7 @@ class TrackIndexSource:
     artist_bio: str | None
     release_title: str
     release_description: str | None
+    featured_artist_names: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +50,7 @@ class DocumentBuilder:
             "artist_bio": "Artist bio",
             "release_title": "Release title",
             "release_description": "Release description",
+            "featured_artist_names": "Featured artists",
         }
         res: list[str] = []
         for field in fields(self.source):
