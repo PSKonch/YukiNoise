@@ -25,7 +25,7 @@ class EmbeddingProvider(Protocol):
     ) -> Sequence[Sequence[float]]: ...
 
 
-def validate_vector(vector: list[float], expected_dimensions: int) -> list[float]:
+def validate_vector(vector: Sequence[float], expected_dimensions: int) -> list[float]:
     if len(vector) != expected_dimensions:
         raise DiscoveryInvalidModelOutputError(
             detail=f"Vector has {len(vector)} dimensions, expected {expected_dimensions}"
@@ -35,7 +35,7 @@ def validate_vector(vector: list[float], expected_dimensions: int) -> list[float
         raise DiscoveryInvalidModelOutputError(
             detail="Vector contains non-finite values"
         )
-    return vector
+    return list(vector)
 
 
 class E5HuggingFaceEmbeddingProvider:
