@@ -20,7 +20,11 @@ RUN apt-get update \
 
 COPY pyproject.toml poetry.lock ./
 
-RUN poetry install --no-ansi --no-root
+# Resume large wheels (especially CPU PyTorch) after interrupted downloads.
+RUN POETRY_REQUESTS_TIMEOUT=120 \
+    POETRY_REQUESTS_MAX_RETRIES=20 \
+    POETRY_INSTALLER_MAX_WORKERS=4 \
+    poetry install --no-ansi --no-root
 
 COPY src ./src
 COPY alembic.ini ./
