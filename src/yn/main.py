@@ -11,6 +11,7 @@ from redis.asyncio import Redis
 from yn.modules.artists.route import router as artists_router
 from yn.modules.auth.route import router as auth_router
 from yn.modules.commentaries.route import router as commentaries_router
+from yn.modules.discovery.kafka import router as discovery_kafka_router
 from yn.modules.follows.route import router as follows_router
 from yn.modules.likes.route import router as likes_router
 from yn.modules.playback.deps import (
@@ -36,6 +37,7 @@ from yn.shared.settings import settings
 from yn.tasks.broker import broker
 
 kafka_broker.include_router(playlists_kafka_router)
+kafka_broker.include_router(discovery_kafka_router)
 kafka_broker.include_router(tracks_kafka_router)
 
 
