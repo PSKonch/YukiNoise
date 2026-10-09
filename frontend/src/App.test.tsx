@@ -140,4 +140,12 @@ describe("App discovery", () => {
     expect(screen.getAllByText(/01 авг.*31 авг/i).length).toBeGreaterThan(0);
     expect(screen.getByText(track.title)).toBeTruthy();
   });
+
+  it("opens the curator from navigation and offers sign-in to guests", async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByTitle("Куратор"));
+    expect(screen.getByRole("heading", { name: "Куратор" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "ВОЙТИ И ПОПРОБОВАТЬ →" }));
+    expect(screen.getByRole("heading", { name: "Вернуться в сеть" })).toBeTruthy();
+  });
 });

@@ -111,9 +111,20 @@ class TrackEmbeddingRepository:
         await self._session.execute(stmt)
 
     async def get_track_ids(
-        self, *, after: UUID | None = None, limit: int = 100
+        self,
+        *,
+        after: UUID | None = None,
+        limit: int = 100,
+        release_id: UUID | None = None,
+        artist_id: UUID | None = None,
     ) -> list[UUID]:
         query = select(Track.id).order_by(Track.id).limit(limit)
+        if release_id is not None:
+            query = query.where(Track.release_id == release_id)
+        if artist_id is not None:
+            query = query.join(Release, Release.id == Track.release_id).where(
+                Release.artist_id == artist_id
+            )
         if after is not None:
             query = query.where(Track.id > after)
         return list((await self._session.execute(query)).scalars().all())
