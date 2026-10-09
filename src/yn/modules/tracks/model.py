@@ -11,6 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from yn.shared.database import Base
 
 if TYPE_CHECKING:
+    from yn.modules.artists.model import Artist
     from yn.modules.playlists.model import PlaylistTrack
     from yn.modules.releases.model import Release
 
@@ -49,6 +50,14 @@ class Track(Base):
     playlists: Mapped[list["PlaylistTrack"]] = relationship(
         "PlaylistTrack", back_populates="track"
     )
+    featured_artists: Mapped[list["Artist"]] = relationship(
+        "Artist",
+        secondary="track_features",
+        back_populates="featured_tracks",
+        order_by="Artist.displayed_name",
+        lazy="selectin",
+        passive_deletes=True,
+    )
 
     __table_args__ = (
         Index("ix_tracks_created_at", "created_at", postgresql_using="btree"),
@@ -73,4 +82,23 @@ class Track(Base):
             unique=True,
             postgresql_where=deleted_at.is_(None),
         ),
+    )
+
+
+class TrackFeature(Base):
+    __tablename__ = "track_features"
+
+    track_id: Mapped[PyUUID] = mapped_column(
+        SA_UUID(as_uuid=True),
+        ForeignKey("tracks.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    artist_id: Mapped[PyUUID] = mapped_column(
+        SA_UUID(as_uuid=True),
+        ForeignKey("artists.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+
+    __table_args__ = (
+        Index("ix_track_features_artist_id", "artist_id", postgresql_using="btree"),
     )

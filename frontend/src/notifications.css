@@ -1,0 +1,40 @@
+.following-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin: 25px 0; }
+.following-toolbar > span, .following-release-date { color: #858c85; font: 9px/1.7 "IBM Plex Mono", monospace; }
+.following-release-date { margin: 10px 0 24px; }
+.following-more { display: block; margin: 24px auto; }
+.following-feed .empty .primary { margin-top: 15px; }
+.following-feed .form-error { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+.notification-center { position: relative; }
+.notification-bell { position: relative; display: grid; place-items: center; width: 40px; height: 40px; color: #aeb5ae; background: #131713; border: 1px solid #343a34; cursor: pointer; }
+.notification-bell:hover, .notification-bell[aria-expanded="true"] { color: var(--signal); border-color: var(--signal-dark); }
+.notification-count { position: absolute; top: -6px; right: -8px; display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; color: #111411; background: var(--signal); border-radius: 10px; font: 700 9px "IBM Plex Mono", monospace; }
+.notification-panel { position: absolute; top: 52px; right: 0; width: min(410px, calc(100vw - 28px)); max-height: min(650px, calc(100dvh - 170px)); overflow: auto; color: #dce0dc; background: #101410; border: 1px solid #414741; box-shadow: 10px 15px 45px #000c; }
+.notification-panel > header { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 20px 18px 12px; }
+.notification-panel h2 { margin: 7px 0 0; font: 700 22px Inter, sans-serif; letter-spacing: -.04em; }
+.notification-panel .micro { color: var(--signal-dark); font-size: 8px; }
+.notification-actions { display: flex; justify-content: space-between; gap: 8px; padding: 0 12px 12px; border-bottom: 1px solid #303630; }
+.notification-actions .ghost { padding: 9px 7px; font-size: 9px; }
+.notification-panel ul { margin: 0; padding: 0; list-style: none; }
+.notification-item { display: grid; grid-template-columns: 6px 1fr 12px; align-items: start; gap: 12px; width: 100%; padding: 18px; text-align: left; color: inherit; background: transparent; border: 0; border-bottom: 1px solid #252b25; cursor: pointer; }
+.notification-item:hover { background: #ffffff06; }
+.notification-item.is-unread { background: #b8e46c08; }
+.notification-item > span:nth-child(2) { display: grid; gap: 7px; min-width: 0; }
+.notification-item strong { font: 600 11px Inter, sans-serif; }
+.notification-item span span { color: #a5ada5; overflow-wrap: anywhere; font: 11px/1.6 "IBM Plex Mono", monospace; }
+.notification-item time, .notification-item small { color: #777f77; font: 8px "IBM Plex Mono", monospace; }
+.notification-item small { text-transform: uppercase; }
+.notification-item b { color: #838c83; font-weight: 400; }
+.notification-indicator { width: 5px; height: 5px; margin-top: 4px; border-radius: 50%; background: transparent; }
+.is-unread .notification-indicator { background: var(--signal); }
+.notification-empty { padding: 35px 22px; text-align: center; }
+.notification-empty strong { font-size: 13px; }
+.notification-empty p, .notification-panel > p { color: #858e85; font: 10px/1.8 "IBM Plex Mono", monospace; }
+.notification-panel > p, .notification-panel .form-error { margin: 15px; }
+.notification-more { display: block; margin: 15px auto; }
+.notification-panel button:disabled, .following-feed button:disabled { opacity: .5; cursor: wait; }
+.notification-center button:focus-visible { outline: 2px solid var(--signal); outline-offset: -3px; }
+@media (max-width: 760px) {
+  .notification-panel { position: fixed; top: 71px; right: 10px; max-height: calc(100dvh - 240px); }
+  .notification-bell { width: 35px; height: 35px; }
+  .following-toolbar { margin-top: 20px; }
+}

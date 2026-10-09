@@ -1,16 +1,17 @@
 from typing import TYPE_CHECKING, Any, Sequence
 from uuid import UUID
 
-from sqlalchemy import and_, func, insert, or_, select, update
+from sqlalchemy import and_, delete, func, insert, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager
 
+from yn.modules.artists.model import Artist
 from yn.modules.likes.enums import TargetType
 from yn.modules.likes.model import Like
 from yn.modules.releases.model import Release
 from yn.modules.tracks.errors import TrackConflictError
-from yn.modules.tracks.model import Track
+from yn.modules.tracks.model import Track, TrackFeature
 
 if TYPE_CHECKING:
     pass
@@ -135,7 +136,12 @@ class TrackRepository:
             .where(
                 and_(
                     self.model.deleted_at.is_(None),
-                    Release.artist_id == artist_id,
+                    or_(
+                        Release.artist_id == artist_id,
+                        self.model.featured_artists.any(
+                            and_(Artist.id == artist_id, Artist.deleted_at.is_(None))
+                        ),
+                    ),
                     Release.publicly_visible_clause(),
                 )
             )
@@ -247,6 +253,7 @@ class TrackRepository:
         duration_seconds: int,
         path: str,
         genres: list[str],
+        featured_artist_ids: list[UUID] | None = None,
     ) -> Track:
         stmt = (
             insert(self.model)
@@ -263,9 +270,11 @@ class TrackRepository:
         )
         try:
             result = await self._session.execute(stmt)
+            track = result.scalar_one()
+            await self._replace_featured_artists(track, featured_artist_ids or [])
         except IntegrityError as exc:
             raise TrackConflictError from exc
-        return result.scalar_one()
+        return track
 
     async def update(
         self,
@@ -275,6 +284,7 @@ class TrackRepository:
         title: str | None = None,
         track_number_in_release: int | None = None,
         genres: list[str] | None = None,
+        featured_artist_ids: list[UUID] | None = None,
     ) -> Track | None:
         values: dict[str, Any] = {}
         if title is not None:
@@ -284,26 +294,44 @@ class TrackRepository:
         if genres is not None:
             values["genres"] = genres
 
-        if not values:
+        if not values and featured_artist_ids is None:
             return None
 
+        clause = and_(
+            self.model.id == track_id,
+            self.model.release_id == release_id,
+            self.model.deleted_at.is_(None),
+        )
         stmt = (
-            update(self.model)
-            .where(
-                and_(
-                    self.model.id == track_id,
-                    self.model.release_id == release_id,
-                    self.model.deleted_at.is_(None),
-                )
-            )
-            .values(**values)
-            .returning(self.model)
+            update(self.model).where(clause).values(**values).returning(self.model)
+            if values
+            else select(self.model).where(clause).with_for_update()
         )
         try:
             result = await self._session.execute(stmt)
+            track = result.scalar_one_or_none()
+            if track is not None and featured_artist_ids is not None:
+                await self._replace_featured_artists(track, featured_artist_ids)
         except IntegrityError as exc:
             raise TrackConflictError from exc
-        return result.scalar_one_or_none()
+        return track
+
+    async def _replace_featured_artists(
+        self, track: Track, featured_artist_ids: list[UUID]
+    ) -> None:
+        await self._session.execute(
+            delete(TrackFeature).where(TrackFeature.track_id == track.id)
+        )
+        if featured_artist_ids:
+            await self._session.execute(
+                insert(TrackFeature).values(
+                    [
+                        {"track_id": track.id, "artist_id": artist_id}
+                        for artist_id in featured_artist_ids
+                    ]
+                )
+            )
+        await self._session.refresh(track, ["featured_artists"])
 
     async def soft_delete(self, track_id: UUID, release_id: UUID) -> bool:
         stmt = (

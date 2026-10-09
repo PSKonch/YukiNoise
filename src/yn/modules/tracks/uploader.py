@@ -3,7 +3,7 @@ import math
 import shutil
 import tempfile
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import UUID
 
@@ -19,6 +19,7 @@ from yn.modules.tracks.errors import (
     TrackPositionError,
     TrackUploadFailedError,
 )
+from yn.modules.tracks.validation import validate_featured_artists
 from yn.shared.minio import MinioStorage
 from yn.shared.settings import settings
 from yn.shared.unit_of_work import UnitOfWork
@@ -51,6 +52,7 @@ class TrackUploadPayload:
     genres: list[str]
     storage_key: str
     temp_path: str
+    featured_artist_ids: list[UUID] = field(default_factory=list)
 
     def to_message(self) -> dict[str, object]:
         return {
@@ -62,6 +64,9 @@ class TrackUploadPayload:
             "genres": self.genres,
             "storage_key": self.storage_key,
             "temp_path": self.temp_path,
+            "featured_artist_ids": [
+                str(artist_id) for artist_id in self.featured_artist_ids
+            ],
         }
 
     @classmethod
@@ -78,6 +83,9 @@ class TrackUploadPayload:
             payload["track_number_in_release"]
         )
         validate_track_number_in_release(track_number_in_release)
+        featured_artist_ids_value = payload.get("featured_artist_ids", [])
+        if not isinstance(featured_artist_ids_value, list):
+            raise ValueError("Featured artist IDs must be a list")
 
         return cls(
             track_id=UUID(str(payload["track_id"])),
@@ -88,6 +96,9 @@ class TrackUploadPayload:
             genres=genres,
             storage_key=str(payload["storage_key"]),
             temp_path=str(payload["temp_path"]),
+            featured_artist_ids=[
+                UUID(str(value)) for value in featured_artist_ids_value
+            ],
         )
 
 
@@ -136,6 +147,11 @@ class TrackUploadProcessor:
 
         track = None
         try:
+            await validate_featured_artists(
+                self.uow,
+                artist_id=payload.current_artist_id,
+                featured_artist_ids=payload.featured_artist_ids,
+            )
             duration_seconds = await self._read_duration_seconds(payload.temp_path)
             await self._upload_to_storage(
                 storage_key=payload.storage_key, temp_path=payload.temp_path
@@ -148,6 +164,7 @@ class TrackUploadProcessor:
                 duration_seconds=duration_seconds,
                 path=payload.storage_key,
                 genres=payload.genres,
+                featured_artist_ids=payload.featured_artist_ids,
             )
             await request_track_index(self.uow, track.id)
             await self.uow.commit()

@@ -40,6 +40,26 @@ def test_available_sources_lists_populated_fields(candidate: TrackCandidateDTO) 
     ]
 
 
+def test_curator_can_cite_featured_artists(candidate: TrackCandidateDTO) -> None:
+    candidate = replace(
+        candidate, source=replace(candidate.source, featured_artist_names=("Guest",))
+    )
+    result = GeneratedCuration(
+        title="Подборка",
+        summary="",
+        tracks=[
+            GeneratedTrack(
+                track_id=candidate.track_id,
+                reason="Совместный трек с Guest.",
+                sources=["track.featured_artists"],
+            )
+        ],
+    )
+
+    assert "track.featured_artists" in available_sources(candidate)
+    assert validate_curation(result, [candidate], limit=8) == result
+
+
 @pytest.mark.parametrize("empty_text", [None, "", " \t\n"])
 def test_available_sources_omits_empty_fields(
     candidate: TrackCandidateDTO, empty_text: str | None

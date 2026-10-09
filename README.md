@@ -73,6 +73,58 @@ available, then run `pytest tests/modules/discovery/test_postgres.py`.
 - Release covers are queued through Taskiq and uploaded to MinIO in the worker.
 - Scheduled releases are handled by the Taskiq scheduler; run it with `taskiq scheduler yn.tasks.scheduler:scheduler yn.tasks`.
 
+## Featured artists
+
+Apply the migration with `./venv/bin/alembic upgrade head`.
+Track uploads accept repeated `featured_artist_ids` fields in multipart form data.
+`PATCH /tracks/{track_id}` accepts `{"featured_artist_ids": ["artist-uuid"]}`;
+an empty list removes all features, and an omitted field keeps them unchanged.
+Only the release owner can edit tracks, and the release must be a draft.
+Featured artists must exist, be active, be unique, and differ from the release owner.
+
+Track responses, including tracks nested in releases and playlists, include
+`featured_artists` with each artist's `id` and `displayed_name`. Public artist track
+lists include both their own tracks and features. Featured artists also participate
+in discovery indexing; changing their name reindexes the related tracks.
+
+## Following releases and notifications
+
+Apply the migration with `./venv/bin/alembic upgrade head`, then restart the API,
+Taskiq worker and scheduler. Docker Compose runs migrations before starting the API.
+
+After signing in, open **Подписки** to see public releases from followed artists,
+newest release first. Existing releases also appear when you follow an artist.
+The existing follow system requires an artist profile; accounts without one see
+a link to create it. Drafts, future releases, deleted releases and deleted artists
+stay outside this feed.
+
+The header bell shows new-release notifications, an unread count, pagination and
+**Прочитать все**. Selecting a notification marks it read and opens the release.
+The count refreshes every 30 seconds while the page is visible and on window focus;
+opening the bell reloads the messages.
+
+Publication writes a `release.published` event to the transactional outbox in the
+same transaction as the status change. The API's Kafka consumer delivers messages
+in batches of 100, with a database constraint preventing duplicate user/release
+notifications after retries. Only active subscribers who followed before the
+publication event are eligible; following later does not send old notifications.
+Scheduled publication runs every minute. Already-published releases are not
+backfilled into notifications. Notifications work independently of discovery and
+do not require an LLM key.
+
+Authenticated endpoints:
+
+- `GET /me/feed/releases?limit=20&offset=0`: `{items, has_more}`.
+- `GET /notifications?limit=20&offset=0&unread_only=false`: `{items, unread_count, has_more}`.
+- `GET /notifications/unread-count`.
+- `PATCH /notifications/{notification_id}/read`.
+- `POST /notifications/read-all`.
+
+Each account can only read and update its own notifications. Notifications for
+removed or hidden releases are excluded from the list and unread count.
+PostgreSQL integration tests use the same isolated `YUKINOISE_TEST_PG_DSN` setting:
+`pytest tests/modules/notifications`.
+
 ## Player module
 
 The Spotify-style player API is available below `/me/player`. Live state and queue
@@ -95,3 +147,9 @@ The frontend is also part of Docker Compose and is available at
 bundle and proxies same-origin `/api/*` requests and player WebSockets to FastAPI.
 The OpenAPI UI is available directly at `http://localhost:8000/docs` and through
 the frontend proxy at `http://localhost:5173/api/docs`.
+
+Container dependency installation allows 20 download retries, uses a 120-second
+HTTP timeout and limits concurrent installers to four. Poetry can resume large
+PyTorch wheels after an interrupted connection when the server supports byte ranges.
+If a temporary download outage still exhausts the retries, rerun
+`docker compose up -d --build`.

@@ -5,11 +5,14 @@ from uuid import UUID
 from sqlalchemy import and_, func, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, selectinload, with_loader_criteria
 
+from yn.modules.artists.model import Artist
+from yn.modules.follows.model import Follow
 from yn.modules.releases.enums import ReleaseStatus, ReleaseType
 from yn.modules.releases.errors import ReleaseConflictError
 from yn.modules.releases.model import Release
+from yn.modules.tracks.model import Track
 
 
 class ReleaseRepository:
@@ -19,6 +22,33 @@ class ReleaseRepository:
         self._session = session
 
     # Public read
+    async def get_following_releases(
+        self, follower_id: UUID, *, limit: int, offset: int
+    ) -> Sequence[Release]:
+        query = (
+            select(self.model)
+            .join(Artist, Artist.id == self.model.artist_id)
+            .join(Follow, Follow.followed_id == Artist.id)
+            .where(
+                Follow.follower_id == follower_id,
+                Artist.deleted_at.is_(None),
+                self.model.publicly_visible_clause(),
+            )
+            .options(
+                joinedload(self.model.artist),
+                selectinload(self.model.tracks),
+                with_loader_criteria(Track, Track.deleted_at.is_(None)),
+            )
+            .order_by(
+                func.coalesce(self.model.release_date, self.model.created_at).desc(),
+                self.model.id.desc(),
+            )
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(query)
+        return result.scalars().unique().all()
+
     async def get_public_release_by_id(self, release_id: UUID) -> Release | None:
         query = select(self.model).where(
             and_(self.model.id == release_id, self.model.publicly_visible_clause())

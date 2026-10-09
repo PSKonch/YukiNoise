@@ -8,6 +8,7 @@ from uuid import uuid4
 import pytest
 from pydantic import TypeAdapter
 
+from yn.modules.artists.service import ArtistService
 from yn.modules.discovery.events import (
     ArtistIndexRequestedEvent,
     IndexRequestedEvent,
@@ -124,6 +125,51 @@ def test_track_update_records_event_before_commit(
         )
         assert order == ["event", "commit"]
         assert uow.outbox.add.await_args.kwargs["payload"]["track_id"] == str(track.id)
+
+    asyncio.run(run())
+
+
+def test_artist_deletion_queues_related_tracks_before_features_are_removed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def run() -> None:
+        monkeypatch.setattr(settings, "discovery_enabled", True)
+        artist = SimpleNamespace(id=uuid4())
+        track_ids = [uuid4(), uuid4()]
+        order: list[str] = []
+
+        def delete_artist(user_id: Any) -> bool:
+            order.append("delete")
+            return True
+
+        uow = SimpleNamespace(
+            artists=SimpleNamespace(
+                get_artist_by_user_id=AsyncMock(return_value=artist),
+                hard_delete_artist=AsyncMock(side_effect=delete_artist),
+            ),
+            track_embeddings=SimpleNamespace(
+                get_track_ids=AsyncMock(side_effect=[track_ids[:1], track_ids[1:], []])
+            ),
+            outbox=SimpleNamespace(
+                add=AsyncMock(side_effect=lambda **_: order.append("event"))
+            ),
+            commit=AsyncMock(side_effect=lambda: order.append("commit")),
+        )
+        cache = SimpleNamespace(delete=AsyncMock())
+        service = ArtistService(
+            cast(Any, uow), cast(Any, cache), cast(Any, None), cast(Any, None)
+        )
+
+        assert await service.hard_delete_artist(uuid4()) is True
+        assert order == ["event", "event", "delete", "commit"]
+        assert [
+            call.kwargs["payload"]["track_id"]
+            for call in uow.outbox.add.await_args_list
+        ] == [str(track_id) for track_id in track_ids]
+        assert [
+            call.kwargs["after"]
+            for call in uow.track_embeddings.get_track_ids.await_args_list
+        ] == [None, *track_ids]
 
     asyncio.run(run())
 
