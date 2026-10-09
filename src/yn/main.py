@@ -13,8 +13,11 @@ from yn.modules.auth.route import router as auth_router
 from yn.modules.commentaries.route import router as commentaries_router
 from yn.modules.discovery.kafka import router as discovery_kafka_router
 from yn.modules.discovery.route import router as discovery_router
+from yn.modules.feed.route import router as feed_router
 from yn.modules.follows.route import router as follows_router
 from yn.modules.likes.route import router as likes_router
+from yn.modules.notifications.kafka import router as notifications_kafka_router
+from yn.modules.notifications.route import router as notifications_router
 from yn.modules.playback.deps import (
     get_playback_redis_client,
     get_tracks_play_counter_queue,
@@ -40,6 +43,7 @@ from yn.tasks.broker import broker
 kafka_broker.include_router(playlists_kafka_router)
 kafka_broker.include_router(discovery_kafka_router)
 kafka_broker.include_router(tracks_kafka_router)
+kafka_broker.include_router(notifications_kafka_router)
 
 
 @asynccontextmanager
@@ -131,6 +135,8 @@ app.include_router(posts_router)
 app.include_router(releases_router)
 app.include_router(tracks_router)
 app.include_router(discovery_router)
+app.include_router(feed_router)
+app.include_router(notifications_router)
 
 
 @app.get("/health/live")

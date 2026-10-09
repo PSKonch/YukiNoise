@@ -109,4 +109,26 @@ export interface Curation {
   tracks: CuratedTrack[];
 }
 
-export type ViewName = "discover" | "curator" | "artists" | "feed" | "library" | "studio" | "settings";
+export interface ReleaseFeedPage {
+  items: Release[];
+  has_more: boolean;
+}
+
+export interface AppNotification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  payload: Record<string, string>;
+  release_id: string | null;
+  created_at: string;
+  read_at: string | null;
+}
+
+export interface NotificationPage {
+  items: AppNotification[];
+  unread_count: number;
+  has_more: boolean;
+}
+
+export type ViewName = "discover" | "curator" | "artists" | "feed" | "following" | "library" | "studio" | "settings";

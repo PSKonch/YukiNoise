@@ -1,6 +1,7 @@
 import logging
 
 from yn.modules.discovery.events import request_release_index
+from yn.modules.releases.events import record_release_published
 from yn.shared.database import async_primary_session
 from yn.shared.unit_of_work import UnitOfWork
 from yn.tasks.broker import broker
@@ -18,6 +19,7 @@ async def release_due_releases() -> None:
                     return
                 for release_id in released_ids:
                     await request_release_index(uow, release_id)
+                    await record_release_published(uow, release_id)
                 await uow.commit()
             logger.info(
                 "Published scheduled releases",

@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from yn.modules.discovery.repository import TrackEmbeddingRepository
     from yn.modules.follows.repository import FollowRepository
     from yn.modules.likes.repository import LikeRepository
+    from yn.modules.notifications.repository import NotificationRepository
     from yn.modules.playlists.repository import PlaylistsRepository
     from yn.modules.posts.repository import PostRepository
     from yn.modules.releases.repository import ReleaseRepository
@@ -37,6 +38,7 @@ class UnitOfWork:
         self._track_metrics_repo: "TrackMetricsRepository | None" = None
         self._track_embedding_repo: "TrackEmbeddingRepository | None" = None
         self._outbox_repo: "OutboxRepository | None" = None
+        self._notifications_repo: "NotificationRepository | None" = None
 
     @property
     def users(self) -> "UserRepository":
@@ -153,6 +155,14 @@ class UnitOfWork:
 
             self._track_embedding_repo = TrackEmbeddingRepository(self._session)
         return self._track_embedding_repo
+
+    @property
+    def notifications(self) -> "NotificationRepository":
+        if self._notifications_repo is None:
+            from yn.modules.notifications.repository import NotificationRepository
+
+            self._notifications_repo = NotificationRepository(self._session)
+        return self._notifications_repo
 
     @property
     def outbox(self) -> "OutboxRepository":

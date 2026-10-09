@@ -4,7 +4,7 @@ from uuid import UUID as PyUUID
 from uuid import uuid4
 
 from sqlalchemy import UUID as SA_UUID
-from sqlalchemy import ForeignKey, Index, func
+from sqlalchemy import ForeignKey, Index, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,6 +19,12 @@ class Notification(Base):
     __tablename__ = "notifications"
     __table_args__ = (
         Index("ix_notifications_user_id_created_at", "user_id", "created_at"),
+        Index(
+            "ix_notifications_unread_user",
+            "user_id",
+            postgresql_where=text("read_at IS NULL"),
+        ),
+        UniqueConstraint("user_id", "release_id", name="uq_notifications_user_release"),
     )
 
     id: Mapped[PyUUID] = mapped_column(
@@ -30,6 +36,11 @@ class Notification(Base):
         nullable=False,
     )
     type: Mapped[NotificationType] = mapped_column(nullable=False)
+    release_id: Mapped[PyUUID | None] = mapped_column(
+        SA_UUID(as_uuid=True),
+        ForeignKey("releases.id", ondelete="CASCADE", name="fk_notifications_release"),
+        nullable=True,
+    )
     title: Mapped[str] = mapped_column(nullable=False)
     message: Mapped[str] = mapped_column(nullable=False)
     payload: Mapped[dict[str, str]] = mapped_column(JSONB, nullable=False)
